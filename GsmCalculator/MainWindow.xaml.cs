@@ -1,24 +1,29 @@
-using System.Text;
+using System;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using GsmCalculator.Models;
+using GsmCalculator.Services;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace GsmCalculator
+namespace GsmCalculator;
+
+/// <summary>
+/// Code-behind главного окна.
+/// Логика во MainViewModel; здесь только применение тёмной/светлой
+/// полосы заголовка через DWM при создании окна.
+/// </summary>
+public partial class MainWindow : Window
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
-    public partial class MainWindow : Window
+    public MainWindow()
     {
-        public MainWindow()
-        {
-            InitializeComponent();
-        }
+        InitializeComponent();
+    }
+
+    protected override void OnSourceInitialized(EventArgs e)
+    {
+        base.OnSourceInitialized(e);
+
+        // HWND уже создан — можно красить заголовок под текущую тему.
+        var theme = App.Services?.GetService<IThemeService>()?.CurrentTheme ?? ColorTheme.Light;
+        TitleBarHelper.ApplyDarkTitleBar(this, theme == ColorTheme.Dark);
     }
 }

@@ -4,9 +4,214 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GsmCalculator"
+        xmlns:helpers="clr-namespace:GsmCalculator.Helpers"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
+        Title="GsmCalculator"
+        Height="560" Width="720"
+        MinHeight="460" MinWidth="560"
+        Icon="Resources/app.ico"
+        Background="{DynamicResource WindowBackground}">
 
+    <!-- Клавиатурные шорткаты: цифры, операции NumPad, Enter, Esc, Backspace. -->
+    <Window.InputBindings>
+        <KeyBinding Key="D0" Command="{Binding DigitCommand}" CommandParameter="0"/>
+        <KeyBinding Key="D1" Command="{Binding DigitCommand}" CommandParameter="1"/>
+        <KeyBinding Key="D2" Command="{Binding DigitCommand}" CommandParameter="2"/>
+        <KeyBinding Key="D3" Command="{Binding DigitCommand}" CommandParameter="3"/>
+        <KeyBinding Key="D4" Command="{Binding DigitCommand}" CommandParameter="4"/>
+        <KeyBinding Key="D5" Command="{Binding DigitCommand}" CommandParameter="5"/>
+        <KeyBinding Key="D6" Command="{Binding DigitCommand}" CommandParameter="6"/>
+        <KeyBinding Key="D7" Command="{Binding DigitCommand}" CommandParameter="7"/>
+        <KeyBinding Key="D8" Command="{Binding DigitCommand}" CommandParameter="8"/>
+        <KeyBinding Key="D9" Command="{Binding DigitCommand}" CommandParameter="9"/>
+        <KeyBinding Key="NumPad0" Command="{Binding DigitCommand}" CommandParameter="0"/>
+        <KeyBinding Key="NumPad1" Command="{Binding DigitCommand}" CommandParameter="1"/>
+        <KeyBinding Key="NumPad2" Command="{Binding DigitCommand}" CommandParameter="2"/>
+        <KeyBinding Key="NumPad3" Command="{Binding DigitCommand}" CommandParameter="3"/>
+        <KeyBinding Key="NumPad4" Command="{Binding DigitCommand}" CommandParameter="4"/>
+        <KeyBinding Key="NumPad5" Command="{Binding DigitCommand}" CommandParameter="5"/>
+        <KeyBinding Key="NumPad6" Command="{Binding DigitCommand}" CommandParameter="6"/>
+        <KeyBinding Key="NumPad7" Command="{Binding DigitCommand}" CommandParameter="7"/>
+        <KeyBinding Key="NumPad8" Command="{Binding DigitCommand}" CommandParameter="8"/>
+        <KeyBinding Key="NumPad9" Command="{Binding DigitCommand}" CommandParameter="9"/>
+        <KeyBinding Key="Add"      Command="{Binding OperationCommand}" CommandParameter="+"/>
+        <KeyBinding Key="Subtract" Command="{Binding OperationCommand}" CommandParameter="-"/>
+        <KeyBinding Key="Multiply" Command="{Binding OperationCommand}" CommandParameter="×"/>
+        <KeyBinding Key="Divide"   Command="{Binding OperationCommand}" CommandParameter="÷"/>
+        <KeyBinding Key="OemPlus"  Command="{Binding OperationCommand}" CommandParameter="+"/>
+        <KeyBinding Key="OemMinus" Command="{Binding OperationCommand}" CommandParameter="-"/>
+        <KeyBinding Key="Decimal"   Command="{Binding DecimalCommand}"/>
+        <KeyBinding Key="OemPeriod" Command="{Binding DecimalCommand}"/>
+        <KeyBinding Key="OemComma"  Command="{Binding DecimalCommand}"/>
+        <KeyBinding Key="Enter"  Command="{Binding EqualsCommand}"/>
+        <KeyBinding Key="Return" Command="{Binding EqualsCommand}"/>
+        <KeyBinding Key="Escape" Command="{Binding ClearCommand}"/>
+        <KeyBinding Key="Back"   Command="{Binding BackspaceCommand}"/>
+        <KeyBinding Key="Delete" Command="{Binding ClearEntryCommand}"/>
+    </Window.InputBindings>
+
+    <Window.Resources>
+        <!-- Универсальный стиль для всех кнопок калькулятора.
+             Focusable=False — чтобы клик мышью не «крал» фокус клавиатуры,
+             иначе Enter/Space на сфокусированной кнопке кликали бы её снова
+             вместо срабатывания глобальных InputBindings (Enter=, Space и т.п.).
+             Цвета — через DynamicResource, чтобы смена темы перекрашивала. -->
+        <Style x:Key="CalcButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Margin" Value="3"/>
+            <Setter Property="FontSize" Value="18"/>
+            <Setter Property="MinWidth" Value="50"/>
+            <Setter Property="MinHeight" Value="50"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Background" Value="{DynamicResource DigitButtonBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource DigitButtonForeground}"/>
+        </Style>
+
+        <!-- Кнопки операций (÷ × − +). -->
+        <Style x:Key="OpButtonStyle" TargetType="Button" BasedOn="{StaticResource CalcButtonStyle}">
+            <Setter Property="Background" Value="{DynamicResource OperationButtonBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource OperationButtonForeground}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <!-- Кнопка "=" — акцентная. -->
+        <Style x:Key="EqualsButtonStyle" TargetType="Button" BasedOn="{StaticResource CalcButtonStyle}">
+            <Setter Property="Background" Value="{DynamicResource EqualsButtonBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource EqualsButtonForeground}"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <!-- Сервисные кнопки (CE, C, Backspace). -->
+        <Style x:Key="UtilButtonStyle" TargetType="Button" BasedOn="{StaticResource CalcButtonStyle}">
+            <Setter Property="Background" Value="{DynamicResource UtilButtonBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource UtilButtonForeground}"/>
+        </Style>
+
+        <!-- Кнопки верхней панели.
+             Focusable=False — иначе после клика «Настройки» фокус остаётся на кнопке,
+             и следующий Enter снова открывает окно настроек вместо вычисления. -->
+        <Style x:Key="TopBarButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="MinHeight" Value="34"/>
+            <Setter Property="Margin" Value="0,0,8,0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="helpers:ButtonProps.CornerRadius" Value="3"/>
+            <Setter Property="Background" Value="{DynamicResource TopBarButtonBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource TopBarButtonForeground}"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- Верхняя панель -->
+            <RowDefinition Height="Auto"/>   <!-- Дисплей -->
+            <RowDefinition Height="*"/>      <!-- Калькулятор + история -->
+        </Grid.RowDefinitions>
+
+        <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button Content="{DynamicResource Main_AddWidget}" Style="{StaticResource TopBarButtonStyle}"
+                    Command="{Binding OpenAddWidgetCommand}"/>
+            <Button Content="{DynamicResource Main_Settings}" Style="{StaticResource TopBarButtonStyle}"
+                    Command="{Binding OpenSettingsCommand}"/>
+        </StackPanel>
+
+        <!-- ДИСПЛЕЙ (двухстрочный: превью выражения + текущее число) -->
+        <Border Grid.Row="1" Background="{DynamicResource DisplayBackground}"
+                Padding="20,10" Margin="0,0,0,10" CornerRadius="6">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Превью выражения, серое, мелкое -->
+                <TextBlock Grid.Row="0"
+                           Text="{Binding ExpressionPreview}"
+                           Foreground="{DynamicResource DisplayPreviewForeground}"
+                           FontFamily="Consolas" FontSize="16"
+                           HorizontalAlignment="Right" MinHeight="20"
+                           TextTrimming="CharacterEllipsis"
+                           Margin="0,0,0,4"/>
+
+                <!-- Основное число, крупное -->
+                <TextBlock Grid.Row="1"
+                           Text="{Binding Display}"
+                           Foreground="{DynamicResource DisplayForeground}"
+                           FontFamily="Consolas" FontSize="40"
+                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+            </Grid>
+        </Border>
+
+        <!-- ОСНОВНАЯ ОБЛАСТЬ: КАЛЬКУЛЯТОР + ИСТОРИЯ -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" MinWidth="320"/>
+                <ColumnDefinition Width="*"  MinWidth="180"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- ===== Кнопки калькулятора 5x4 ===== -->
+            <UniformGrid Grid.Column="0" Rows="5" Columns="4">
+                <!-- ряд 1 -->
+                <Button Content="CE" Style="{StaticResource UtilButtonStyle}" Command="{Binding ClearEntryCommand}"/>
+                <Button Content="C"  Style="{StaticResource UtilButtonStyle}" Command="{Binding ClearCommand}"/>
+                <Button Content="⌫"  Style="{StaticResource UtilButtonStyle}" Command="{Binding BackspaceCommand}"/>
+                <Button Content="÷"  Style="{StaticResource OpButtonStyle}"   Command="{Binding OperationCommand}" CommandParameter="÷"/>
+
+                <!-- ряд 2 -->
+                <Button Content="7" Style="{StaticResource CalcButtonStyle}" Command="{Binding DigitCommand}" CommandParameter="7"/>
+                <Button Content="8" Style="{StaticResource CalcButtonStyle}" Command="{Binding DigitCommand}" CommandParameter="8"/>
+                <Button Content="9" Style="{StaticResource CalcButtonStyle}" Command="{Binding DigitCommand}" CommandParameter="9"/>
+                <Button Content="×" Style="{StaticResource OpButtonStyle}"   Command="{Binding OperationCommand}" CommandParameter="×"/>
+
+                <!-- ряд 3 -->
+                <Button Content="4" Style="{StaticResource CalcButtonStyle}" Command="{Binding DigitCommand}" CommandParameter="4"/>
+                <Button Content="5" Style="{StaticResource CalcButtonStyle}" Command="{Binding DigitCommand}" CommandParameter="5"/>
+                <Button Content="6" Style="{StaticResource CalcButtonStyle}" Command="{Binding DigitCommand}" CommandParameter="6"/>
+                <Button Content="−" Style="{StaticResource OpButtonStyle}"   Command="{Binding OperationCommand}" CommandParameter="-"/>
+
+                <!-- ряд 4 -->
+                <Button Content="1" Style="{StaticResource CalcButtonStyle}" Command="{Binding DigitCommand}" CommandParameter="1"/>
+                <Button Content="2" Style="{StaticResource CalcButtonStyle}" Command="{Binding DigitCommand}" CommandParameter="2"/>
+                <Button Content="3" Style="{StaticResource CalcButtonStyle}" Command="{Binding DigitCommand}" CommandParameter="3"/>
+                <Button Content="+" Style="{StaticResource OpButtonStyle}"   Command="{Binding OperationCommand}" CommandParameter="+"/>
+
+                <!-- ряд 5 -->
+                <Button Content="±" Style="{StaticResource CalcButtonStyle}" Command="{Binding NegateCommand}"/>
+                <Button Content="0" Style="{StaticResource CalcButtonStyle}" Command="{Binding DigitCommand}" CommandParameter="0"/>
+                <Button Content="." Style="{StaticResource CalcButtonStyle}" Command="{Binding DecimalCommand}"/>
+                <Button Content="=" Style="{StaticResource EqualsButtonStyle}" Command="{Binding EqualsCommand}"/>
+            </UniformGrid>
+
+            <!-- ===== Панель истории ===== -->
+            <Border Grid.Column="1" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
+                    Margin="10,3,3,3" CornerRadius="4">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBackground}" Padding="10,6">
+                        <TextBlock Text="{DynamicResource Main_History}" FontWeight="Bold" FontSize="13"
+                                   Foreground="{DynamicResource TextForeground}"/>
+                    </Border>
+
+                    <ListBox ItemsSource="{Binding History}" BorderThickness="0"
+                             IsTabStop="False"
+                             Background="{DynamicResource WindowBackground}"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock TextWrapping="Wrap" Padding="2"
+                                           Foreground="{DynamicResource TextForeground}">
+                                    <Run Text="{Binding Expression, Mode=OneWay}"/>
+                                    <Run Text=" = " Foreground="{DynamicResource SecondaryForeground}"/>
+                                    <Run Text="{Binding Result, Mode=OneWay}" FontWeight="Bold"/>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

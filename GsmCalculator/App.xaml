@@ -2,8 +2,19 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:GsmCalculator"
-             StartupUri="MainWindow.xaml">
+             ShutdownMode="OnMainWindowClose">
     <Application.Resources>
-
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Общие стили контролов (кастомный шаблон кнопок). -->
+                <ResourceDictionary Source="Resources/ControlStyles.xaml"/>
+                <!-- Тема по умолчанию (Dark). App.OnStartup подменит её
+                     на тему из настроек через IThemeService.ApplyTheme. -->
+                <ResourceDictionary Source="Resources/Themes/DarkTheme.xaml"/>
+                <!-- Язык по умолчанию (RU). App.OnStartup подменит его
+                     на язык из настроек через ILocalizationService.SetLanguage. -->
+                <ResourceDictionary Source="Resources/Strings.ru.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

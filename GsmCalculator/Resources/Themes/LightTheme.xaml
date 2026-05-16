@@ -1,0 +1,39 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ============ СВЕТЛАЯ ТЕМА (по умолчанию) ============ -->
+    <!-- Каждая тема определяет ОДИН И ТОТ ЖЕ набор ключей, меняются только цвета.
+         XAML окон ссылается на них через {DynamicResource ...}. -->
+
+    <!-- Общее -->
+    <SolidColorBrush x:Key="WindowBackground"        Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="TextForeground"          Color="#FF000000"/>
+    <SolidColorBrush x:Key="SecondaryForeground"     Color="#FF808080"/>
+    <SolidColorBrush x:Key="PanelBackground"         Color="#FFF5F5F5"/>
+    <SolidColorBrush x:Key="PanelBorderBrush"        Color="#FFCCCCCC"/>
+    <SolidColorBrush x:Key="ControlBackground"       Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="ControlForeground"       Color="#FF000000"/>
+
+    <!-- Дисплей -->
+    <SolidColorBrush x:Key="DisplayBackground"        Color="#FF1E1E1E"/>
+    <SolidColorBrush x:Key="DisplayForeground"        Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="DisplayPreviewForeground" Color="#FF888888"/>
+
+    <!-- Кнопки калькулятора -->
+    <SolidColorBrush x:Key="DigitButtonBackground"      Color="#FFFAFAFA"/>
+    <SolidColorBrush x:Key="DigitButtonForeground"      Color="#FF000000"/>
+    <SolidColorBrush x:Key="OperationButtonBackground"  Color="#FFFFE0B2"/>
+    <SolidColorBrush x:Key="OperationButtonForeground"  Color="#FF000000"/>
+    <SolidColorBrush x:Key="EqualsButtonBackground"     Color="#FF4CAF50"/>
+    <SolidColorBrush x:Key="EqualsButtonForeground"     Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="UtilButtonBackground"       Color="#FFFFCDD2"/>
+    <SolidColorBrush x:Key="UtilButtonForeground"       Color="#FF000000"/>
+    <SolidColorBrush x:Key="TopBarButtonBackground"     Color="#FFE0E0E0"/>
+    <SolidColorBrush x:Key="TopBarButtonForeground"     Color="#FF000000"/>
+
+    <!-- Виджеты -->
+    <SolidColorBrush x:Key="WidgetToKgBackground"   Color="#FFBBDEFB"/>
+    <SolidColorBrush x:Key="WidgetToLBackground"    Color="#FFC8E6C9"/>
+    <SolidColorBrush x:Key="WidgetResultBackground" Color="#FFF5F5F5"/>
+
+</ResourceDictionary>

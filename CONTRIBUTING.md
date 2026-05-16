@@ -9,7 +9,7 @@
 - **Visual Studio 2022** 17.12+ или **JetBrains Rider** 2024.3+
 
 ```bash
-git clone https://github.com/USERNAME/GsmCalculator.git
+git clone https://github.com/Vanchestery/GsmCalculator.git
 cd GsmCalculator
 dotnet restore
 dotnet build

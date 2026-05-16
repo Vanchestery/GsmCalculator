@@ -4,12 +4,12 @@
 > плюс плавающие виджеты для конвертации литров и килограммов
 > по плотности топлива.
 
-[![Build](https://github.com/USERNAME/GsmCalculator/actions/workflows/ci.yml/badge.svg)](https://github.com/USERNAME/GsmCalculator/actions/workflows/ci.yml)
+[![Build](https://github.com/Vanchestery/GsmCalculator/actions/workflows/ci.yml/badge.svg)](https://github.com/Vanchestery/GsmCalculator/actions/workflows/ci.yml)
 [![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/UI-WPF-blue)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Перед публикацией**: замени `USERNAME` на свой GitHub-логин в бейджах и ссылках.
+> **Перед публикацией**: замени `Vanchestery` на свой GitHub-логин в бейджах и ссылках.
 
 ## Описание
 
@@ -42,7 +42,7 @@
 - **Три цветовые темы** Light / Dark / Blue с тёмной полосой заголовка через DWM (Windows 10 1809+).
 - **Локализация RU/EN** на лету через `ResourceDictionary` и `DynamicResource`.
 - **Сохранение сессии**: дисплей, история, открытые виджеты и их позиции восстанавливаются между запусками.
-- **Готовые сборки** для Windows x64 публикуются в [Releases](https://github.com/USERNAME/GsmCalculator/releases) при пуше тега `v*`.
+- **Готовые сборки** для Windows x64 публикуются в [Releases](https://github.com/Vanchestery/GsmCalculator/releases) при пуше тега `v*`.
 
 ## Технологический стек
 
@@ -97,7 +97,7 @@ GsmCalculator/
 Требуется **.NET 9 SDK** и **Visual Studio 2022** 17.12+ (или JetBrains Rider 2024.3+).
 
 ```bash
-git clone https://github.com/USERNAME/GsmCalculator.git
+git clone https://github.com/Vanchestery/GsmCalculator.git
 cd GsmCalculator
 dotnet restore
 dotnet build
@@ -109,7 +109,7 @@ dotnet run --project GsmCalculator
 ### Готовая сборка
 
 Скачать последнюю Windows-сборку (self-contained, не требует .NET Runtime):
-[Releases](https://github.com/USERNAME/GsmCalculator/releases)
+[Releases](https://github.com/Vanchestery/GsmCalculator/releases)
 
 ## Тесты
 

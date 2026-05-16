@@ -1,0 +1,25 @@
+version: 2
+updates:
+  # NuGet packages в основном проекте
+  - package-ecosystem: "nuget"
+    directory: "/GsmCalculator"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(deps)"
+
+  # NuGet packages в тестовом проекте
+  - package-ecosystem: "nuget"
+    directory: "/GsmCalculator.Tests"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(deps-test)"
+
+  # GitHub Actions версии
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "chore(ci)"

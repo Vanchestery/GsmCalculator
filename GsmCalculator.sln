@@ -5,6 +5,8 @@ VisualStudioVersion = 17.14.37216.2 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GsmCalculator", "GsmCalculator\GsmCalculator.csproj", "{6CCCC308-1432-4E41-A7D7-61B065238275}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GsmCalculator.Tests", "GsmCalculator.Tests\GsmCalculator.Tests.csproj", "{79473EEB-4297-4F46-90C9-16361122041B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{6CCCC308-1432-4E41-A7D7-61B065238275}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6CCCC308-1432-4E41-A7D7-61B065238275}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6CCCC308-1432-4E41-A7D7-61B065238275}.Release|Any CPU.Build.0 = Release|Any CPU
+		{79473EEB-4297-4F46-90C9-16361122041B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{79473EEB-4297-4F46-90C9-16361122041B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{79473EEB-4297-4F46-90C9-16361122041B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{79473EEB-4297-4F46-90C9-16361122041B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

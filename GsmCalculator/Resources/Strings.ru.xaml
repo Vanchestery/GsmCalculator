@@ -1,0 +1,83 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:sys="clr-namespace:System;assembly=mscorlib">
+
+    <!-- ============ РУССКИЙ ЯЗЫК ============
+         Каждый ключ должен присутствовать и в Strings.en.xaml.
+         XAML ссылается через {DynamicResource Ключ}, код — через ILocalizationService.Get. -->
+
+    <!-- Общее -->
+    <sys:String x:Key="Common_OK">OK</sys:String>
+    <sys:String x:Key="Common_Cancel">Отмена</sys:String>
+    <sys:String x:Key="Common_Save">Сохранить</sys:String>
+    <sys:String x:Key="Common_Error">Ошибка</sys:String>
+    <sys:String x:Key="Common_ErrorFormat">Ошибка: {0}</sys:String>
+    <sys:String x:Key="Common_Yes">Да</sys:String>
+    <sys:String x:Key="Common_No">Нет</sys:String>
+
+    <!-- Диалог запуска (продолжение сессии) -->
+    <sys:String x:Key="Session_ContinueTitle">Продолжить сессию?</sys:String>
+    <sys:String x:Key="Session_ContinuePrompt">Восстановить прошлую сессию?&#10;Дисплей, история вычислений и открытые виджеты будут восстановлены.</sys:String>
+    <sys:String x:Key="Session_SavedAt">Сохранена: {0}</sys:String>
+
+    <!-- Главное окно -->
+    <sys:String x:Key="Main_AddWidget">Добавить виджет</sys:String>
+    <sys:String x:Key="Main_Settings">Настройки</sys:String>
+    <sys:String x:Key="Main_History">История</sys:String>
+
+    <!-- Виджет -->
+    <sys:String x:Key="Widget_Density">Плотность:</sys:String>
+    <sys:String x:Key="Widget_DecimalPlaces">Знаков после запятой:</sys:String>
+    <sys:String x:Key="Widget_LtoKg">л → кг</sys:String>
+    <sys:String x:Key="Widget_KgToL">кг → л</sys:String>
+    <sys:String x:Key="Widget_Insert">Вставить в калькулятор</sys:String>
+    <sys:String x:Key="Widget_ResultLtoKg">{0} л × {1} = {2} кг</sys:String>
+    <sys:String x:Key="Widget_ResultKgToL">{0} кг ÷ {1} = {2} л</sys:String>
+    <sys:String x:Key="Widget_ErrorDensityPositive">Плотность должна быть больше нуля.</sys:String>
+
+    <!-- Настройки -->
+    <sys:String x:Key="Settings_Title">Настройки</sys:String>
+    <sys:String x:Key="Settings_HistorySize">Размер истории вычислений</sys:String>
+    <sys:String x:Key="Settings_Theme">Цветовая тема</sys:String>
+    <sys:String x:Key="Settings_Startup">Поведение при запуске</sys:String>
+    <sys:String x:Key="Settings_Language">Язык интерфейса</sys:String>
+    <sys:String x:Key="Settings_CalcMode">Режим калькулятора</sys:String>
+    <sys:String x:Key="Settings_ThemeLight">Светлая</sys:String>
+    <sys:String x:Key="Settings_ThemeDark">Тёмная</sys:String>
+    <sys:String x:Key="Settings_ThemeBlue">Синяя</sys:String>
+    <sys:String x:Key="Settings_StartupAsk">Всегда спрашивать</sys:String>
+    <sys:String x:Key="Settings_StartupContinue">Всегда продолжать прошлую сессию</sys:String>
+    <sys:String x:Key="Settings_StartupFresh">Всегда начинать с нуля</sys:String>
+    <sys:String x:Key="Settings_LangRu">Русский</sys:String>
+    <sys:String x:Key="Settings_LangEn">English</sys:String>
+    <sys:String x:Key="Settings_ModeClassic">Классический (слева направо)</sys:String>
+    <sys:String x:Key="Settings_ModeEngineering">Инженерный (приоритет × ÷)</sys:String>
+
+    <!-- Окно «Добавить виджет» -->
+    <sys:String x:Key="AddWidget_Title">Добавить виджет</sys:String>
+    <sys:String x:Key="AddWidget_Available">Доступные виджеты</sys:String>
+    <sys:String x:Key="AddWidget_Open">Открыть</sys:String>
+    <sys:String x:Key="AddWidget_CreateNew">Создать новый…</sys:String>
+    <sys:String x:Key="AddWidget_Delete">Удалить</sys:String>
+    <sys:String x:Key="AddWidget_DeleteTitle">Удаление виджета</sys:String>
+    <sys:String x:Key="AddWidget_DeleteConfirm">Удалить виджет «{0}»?&#10;Это действие нельзя отменить.</sys:String>
+
+    <!-- Элемент списка виджетов -->
+    <sys:String x:Key="WidgetItem_FixedDensity">Фиксированная плотность: {0}</sys:String>
+    <sys:String x:Key="WidgetItem_VariableDensity">Переменная плотность (по умолчанию {0})</sys:String>
+    <sys:String x:Key="WidgetItem_BuiltIn">встроенный</sys:String>
+    <sys:String x:Key="WidgetItem_Custom">свой</sys:String>
+
+    <!-- Окно «Создать виджет» -->
+    <sys:String x:Key="CreateWidget_Title">Создать виджет</sys:String>
+    <sys:String x:Key="CreateWidget_Name">Название</sys:String>
+    <sys:String x:Key="CreateWidget_DensityType">Тип плотности</sys:String>
+    <sys:String x:Key="CreateWidget_Fixed">Фиксированная</sys:String>
+    <sys:String x:Key="CreateWidget_Variable">Переменная</sys:String>
+    <sys:String x:Key="CreateWidget_DefaultDensity">Плотность по умолчанию</sys:String>
+    <sys:String x:Key="CreateWidget_DecimalPlaces">Знаков после запятой</sys:String>
+    <sys:String x:Key="CreateWidget_ValidationName">Введите название виджета.</sys:String>
+    <sys:String x:Key="CreateWidget_ValidationDensityNumber">Плотность должна быть числом (разделитель — точка).</sys:String>
+    <sys:String x:Key="CreateWidget_ValidationDensityPositive">Плотность должна быть больше нуля.</sys:String>
+
+</ResourceDictionary>

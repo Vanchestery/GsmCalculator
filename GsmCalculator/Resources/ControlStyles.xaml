@@ -1,0 +1,100 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:helpers="clr-namespace:GsmCalculator.Helpers">
+
+    <!-- ============ ОБЩИЙ СТИЛЬ КНОПОК ============
+         Неявный (без x:Key) стиль Button — дефолтный для всех кнопок.
+         Кейдированные стили окон (CalcButtonStyle и т.п.) подхватывают его
+         через BasedOn="{StaticResource {x:Type Button}}".
+
+         Радиус скругления — через attached property helpers:ButtonProps.CornerRadius.
+         По умолчанию 7 (большие кнопки калькулятора). Узкие кнопки
+         (верхняя панель, OK/Отмена, виджет) переопределяют на 3.
+
+         Кастомный ControlTemplate даёт:
+         - скруглённые углы (настраиваемый радиус)
+         - drop-shadow (эффект «приподнятости» — 3D)
+         - глянцевый градиент сверху-вниз (объём)
+         - при наведении — лёгкое осветление
+         - при нажатии — контент «вдавливается», тень уменьшается
+         - при IsEnabled=False — выцветание -->
+
+    <Style TargetType="Button">
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <!-- Дефолтный отступ контента от краёв (узкие кнопки переопределяют). -->
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <!-- Слой 1: фон + тень.
+                             CornerRadius читается из attached property владельца шаблона. -->
+                        <Border x:Name="bg"
+                                CornerRadius="{Binding Path=(helpers:ButtonProps.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}"
+                                Background="{TemplateBinding Background}">
+                            <Border.Effect>
+                                <DropShadowEffect Color="#66000000" BlurRadius="4"
+                                                  ShadowDepth="1.5" Direction="270"/>
+                            </Border.Effect>
+                        </Border>
+
+                        <!-- Слой 2: глянцевый градиент (объём) -->
+                        <Border x:Name="gloss"
+                                CornerRadius="{Binding Path=(helpers:ButtonProps.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}">
+                            <Border.Background>
+                                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                    <GradientStop Color="#33FFFFFF" Offset="0"/>
+                                    <GradientStop Color="#0AFFFFFF" Offset="0.5"/>
+                                    <GradientStop Color="#22000000" Offset="1"/>
+                                </LinearGradientBrush>
+                            </Border.Background>
+                        </Border>
+
+                        <!-- Слой 3: подсветка наведения (прозрачная по умолчанию) -->
+                        <Border x:Name="hover"
+                                CornerRadius="{Binding Path=(helpers:ButtonProps.CornerRadius), RelativeSource={RelativeSource TemplatedParent}}"
+                                Background="Transparent"/>
+
+                        <!-- Слой 4: контент кнопки.
+                             Margin = Padding кнопки — иначе текст «прилипает» к краям
+                             (это и был баг: кастомный шаблон не учитывал Padding). -->
+                        <ContentPresenter x:Name="content"
+                                          Margin="{TemplateBinding Padding}"
+                                          HorizontalAlignment="Center"
+                                          VerticalAlignment="Center"
+                                          RecognizesAccessKey="True"/>
+                    </Grid>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="hover" Property="Background" Value="#22FFFFFF"/>
+                        </Trigger>
+
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="content" Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="1.5"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="bg" Property="Effect">
+                                <Setter.Value>
+                                    <DropShadowEffect Color="#66000000" BlurRadius="2"
+                                                      ShadowDepth="0.5" Direction="270"/>
+                                </Setter.Value>
+                            </Setter>
+                            <Setter TargetName="hover" Property="Background" Value="#1A000000"/>
+                        </Trigger>
+
+                        <Trigger Property="IsEnabled" Value="False">
+                            <Setter TargetName="bg" Property="Opacity" Value="0.4"/>
+                            <Setter TargetName="content" Property="Opacity" Value="0.4"/>
+                            <Setter TargetName="bg" Property="Effect" Value="{x:Null}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

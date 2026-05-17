@@ -9,8 +9,6 @@
 [![WPF](https://img.shields.io/badge/UI-WPF-blue)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Перед публикацией**: замени `Vanchestery` на свой GitHub-логин в бейджах и ссылках.
-
 ## Описание
 
 Приложение для расчётов на складах ГСМ (горюче-смазочных материалов).
@@ -19,8 +17,6 @@
 л↔кг по плотности.
 
 ## Скриншоты
-
-Поместите скриншоты в `docs/screenshots/`:
 
 ![Главное окно — тёмная тема](docs/screenshots/main-dark.png)
 ![Виджет конвертации](docs/screenshots/widget.png)

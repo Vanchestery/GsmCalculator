@@ -11,17 +11,17 @@
         Topmost="True"
         ShowInTaskbar="False"
         SizeToContent="Height"
-        Width="300"
+        Width="215"
         Icon="/Resources/app.ico"
         Background="{DynamicResource WindowBackground}">
 
     <Window.Resources>
         <Style x:Key="ConvButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="MinHeight" Value="42"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="MinHeight" Value="28"/>
+            <Setter Property="FontSize" Value="12"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,4"/>
+            <Setter Property="Margin" Value="0,0,0,3"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="helpers:ButtonProps.CornerRadius" Value="3"/>
@@ -37,9 +37,9 @@
         </Style>
 
         <Style x:Key="InsertButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Padding" Value="12,9"/>
-            <Setter Property="MinHeight" Value="38"/>
-            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="MinHeight" Value="26"/>
+            <Setter Property="FontSize" Value="11"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="helpers:ButtonProps.CornerRadius" Value="3"/>
@@ -52,36 +52,36 @@
         </Style>
     </Window.Resources>
 
-    <StackPanel Margin="12">
+    <StackPanel Margin="8">
 
         <!-- Плотность -->
-        <Grid Margin="0,0,0,8">
+        <Grid Margin="0,0,0,5">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock Grid.Column="0" Text="{DynamicResource Widget_Density}"
-                       VerticalAlignment="Center" Margin="0,0,8,0"/>
+                       VerticalAlignment="Center" Margin="0,0,5,0" FontSize="11"/>
 
             <TextBox Grid.Column="1"
                      Text="{Binding DensityText, UpdateSourceTrigger=PropertyChanged}"
                      IsReadOnly="{Binding IsDensityReadOnly}"
                      Background="{DynamicResource ControlBackground}"
                      Foreground="{DynamicResource ControlForeground}"
-                     FontFamily="Consolas" FontSize="14"
-                     Padding="4,2"/>
+                     FontFamily="Consolas" FontSize="12"
+                     Padding="3,1"/>
         </Grid>
 
         <!-- Округление — ползунок 0..3 -->
-        <TextBlock Text="{DynamicResource Widget_DecimalPlaces}" Margin="0,0,0,4"/>
-        <DockPanel Margin="0,0,0,12">
-            <TextBlock DockPanel.Dock="Right" Width="22" TextAlignment="Right"
-                       FontWeight="Bold" Text="{Binding DecimalPlaces}"/>
+        <TextBlock Text="{DynamicResource Widget_DecimalPlaces}" Margin="0,0,0,2" FontSize="11"/>
+        <DockPanel Margin="0,0,0,6">
+            <TextBlock DockPanel.Dock="Right" Width="16" TextAlignment="Right"
+                       FontWeight="Bold" FontSize="11" Text="{Binding DecimalPlaces}"/>
             <Slider Minimum="0" Maximum="3"
                     Value="{Binding DecimalPlaces, Mode=TwoWay}"
                     IsSnapToTickEnabled="True" TickFrequency="1"
-                    VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    VerticalAlignment="Center" Margin="0,0,5,0"/>
         </DockPanel>
 
         <!-- Кнопки конвертации -->
@@ -92,16 +92,16 @@
         <Button Content="{DynamicResource Widget_KgToL}"
                 Style="{StaticResource KgToLStyle}"
                 Command="{Binding KgToLitersCommand}"
-                Margin="0,0,0,12"/>
+                Margin="0,0,0,6"/>
 
         <!-- Результат -->
         <Border Background="{DynamicResource WidgetResultBackground}"
                 BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
-                Padding="8" Margin="0,0,0,8" CornerRadius="3">
+                Padding="5" Margin="0,0,0,5" CornerRadius="3">
             <TextBlock Text="{Binding LastResult}"
                        TextWrapping="Wrap"
-                       MinHeight="36"
-                       FontFamily="Consolas" FontSize="13"/>
+                       MinHeight="22"
+                       FontFamily="Consolas" FontSize="11"/>
         </Border>
 
         <!-- Вставить в калькулятор -->

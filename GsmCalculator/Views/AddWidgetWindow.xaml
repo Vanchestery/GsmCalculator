@@ -57,7 +57,13 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <StackPanel Grid.Column="0">
-                                <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="13"/>
+                                <!-- Foreground задаём явно: ListBoxItem.ControlTemplate
+                                     по умолчанию устанавливает Foreground=SystemColors.ControlText
+                                     (чёрный), что перебивает неявный стиль TextBlock
+                                     для DynamicResource TextForeground. -->
+                                <TextBlock Text="{Binding Name}"
+                                           Foreground="{DynamicResource TextForeground}"
+                                           FontWeight="Bold" FontSize="13"/>
                                 <TextBlock Text="{Binding DensityInfo}"
                                            Foreground="{DynamicResource SecondaryForeground}"
                                            FontSize="11" TextWrapping="Wrap"/>

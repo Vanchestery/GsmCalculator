@@ -23,6 +23,8 @@
     <sys:String x:Key="Main_AddWidget">Add widget</sys:String>
     <sys:String x:Key="Main_Settings">Settings</sys:String>
     <sys:String x:Key="Main_History">History</sys:String>
+    <sys:String x:Key="Main_HideHistory">Hide history</sys:String>
+    <sys:String x:Key="Main_ShowHistory">Show history</sys:String>
 
     <!-- Widget -->
     <sys:String x:Key="Widget_Density">Density:</sys:String>
@@ -56,6 +58,7 @@
     <sys:String x:Key="AddWidget_Title">Add widget</sys:String>
     <sys:String x:Key="AddWidget_Available">Available widgets</sys:String>
     <sys:String x:Key="AddWidget_Open">Open</sys:String>
+    <sys:String x:Key="AddWidget_Edit">Edit</sys:String>
     <sys:String x:Key="AddWidget_CreateNew">Create new…</sys:String>
     <sys:String x:Key="AddWidget_Delete">Delete</sys:String>
     <sys:String x:Key="AddWidget_DeleteTitle">Delete widget</sys:String>
@@ -69,6 +72,7 @@
 
     <!-- Create widget window -->
     <sys:String x:Key="CreateWidget_Title">Create widget</sys:String>
+    <sys:String x:Key="CreateWidget_TitleEdit">Edit widget</sys:String>
     <sys:String x:Key="CreateWidget_Name">Name</sys:String>
     <sys:String x:Key="CreateWidget_DensityType">Density type</sys:String>
     <sys:String x:Key="CreateWidget_Fixed">Fixed</sys:String>

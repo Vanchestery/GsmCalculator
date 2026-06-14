@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         Title="GsmCalculator"
         Height="560" Width="720"
-        MinHeight="460" MinWidth="560"
+        MinHeight="460" MinWidth="540"
         Icon="Resources/app.ico"
         Background="{DynamicResource WindowBackground}">
 
@@ -112,10 +112,22 @@
 
         <!-- ВЕРХНЯЯ ПАНЕЛЬ -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Content="{DynamicResource Main_AddWidget}" Style="{StaticResource TopBarButtonStyle}"
+            <!-- Иконки из Segoe MDL2 Assets (встроенный шрифт Windows 10+):
+                  Add /  Settings /  History.
+                 Foreground наследуется от стиля кнопки → авто-подстройка под тему.
+                 Текст из локализации переехал в ToolTip. -->
+            <Button Content="&#xE710;" Style="{StaticResource TopBarButtonStyle}"
+                    FontFamily="Segoe MDL2 Assets" FontSize="16" Padding="10,8"
+                    ToolTip="{DynamicResource Main_AddWidget}"
                     Command="{Binding OpenAddWidgetCommand}"/>
-            <Button Content="{DynamicResource Main_Settings}" Style="{StaticResource TopBarButtonStyle}"
+            <Button Content="&#xE713;" Style="{StaticResource TopBarButtonStyle}"
+                    FontFamily="Segoe MDL2 Assets" FontSize="16" Padding="10,8"
+                    ToolTip="{DynamicResource Main_Settings}"
                     Command="{Binding OpenSettingsCommand}"/>
+            <Button Content="&#xE81C;" Style="{StaticResource TopBarButtonStyle}"
+                    FontFamily="Segoe MDL2 Assets" FontSize="16" Padding="10,8"
+                    ToolTip="{Binding HistoryToggleLabel}"
+                    Command="{Binding ToggleHistoryCommand}"/>
         </StackPanel>
 
         <!-- ДИСПЛЕЙ (двухстрочный: превью выражения + текущее число) -->
@@ -150,7 +162,7 @@
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2*" MinWidth="320"/>
-                <ColumnDefinition Width="*"  MinWidth="180"/>
+                <ColumnDefinition x:Name="HistoryColumn" Width="*" MinWidth="180"/>
             </Grid.ColumnDefinitions>
 
             <!-- ===== Кнопки калькулятора 5x4 ===== -->
@@ -187,7 +199,8 @@
             </UniformGrid>
 
             <!-- ===== Панель истории ===== -->
-            <Border Grid.Column="1" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
+            <Border x:Name="HistoryBorder"
+                    Grid.Column="1" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
                     Margin="10,3,3,3" CornerRadius="4">
                 <DockPanel>
                     <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBackground}" Padding="10,6">

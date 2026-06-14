@@ -1,4 +1,5 @@
 using System.Windows;
+using GsmCalculator.Helpers;
 using GsmCalculator.Models;
 using GsmCalculator.ViewModels;
 using GsmCalculator.Views;
@@ -55,7 +56,7 @@ public class WidgetWindowService : IWidgetWindowService
 
         // Восстанавливаем позицию, если она в пределах виртуального экрана.
         // Иначе (монитор отключили и т.п.) — раскладываем по умолчанию.
-        if (IsOnScreen(state.Left, state.Top))
+        if (ScreenHelper.IsOnScreen(state.Left, state.Top))
         {
             window.Left = state.Left;
             window.Top = state.Top;
@@ -129,19 +130,6 @@ public class WidgetWindowService : IWidgetWindowService
         };
 
         return (window, vm);
-    }
-
-    /// <summary>Проверяет что точка (left, top) попадает в видимую область экранов.</summary>
-    private static bool IsOnScreen(double left, double top)
-    {
-        var vLeft = SystemParameters.VirtualScreenLeft;
-        var vTop = SystemParameters.VirtualScreenTop;
-        var vRight = vLeft + SystemParameters.VirtualScreenWidth;
-        var vBottom = vTop + SystemParameters.VirtualScreenHeight;
-
-        // Требуем запас 100px справа/снизу, чтобы окно не оказалось почти за краем.
-        return left >= vLeft && left <= vRight - 100
-            && top >= vTop && top <= vBottom - 100;
     }
 
     /// <summary>

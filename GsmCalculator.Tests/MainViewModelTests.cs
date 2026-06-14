@@ -304,6 +304,39 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void NotifyDisplayConsumed_NextDigitStartsNewNumber()
+    {
+        // Сценарий: пользователь ввёл 100, виджет прочитал значение
+        // через GetDisplayValue, затем пользователь вводит 200.
+        // Должно быть 200, а не 100200.
+        var vm = CreateSut();
+        Enter(vm, "100");
+
+        _ = vm.GetDisplayValue();
+        vm.NotifyDisplayConsumed();
+
+        Enter(vm, "200");
+        Assert.Equal("200", vm.Display);
+    }
+
+    [Fact]
+    public void NotifyDisplayConsumed_PreservesPendingOperation()
+    {
+        // 5 + 100 → виджет → 200 → = должно дать 205 (5 + 200), а не 200
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "5");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "100");
+
+        vm.NotifyDisplayConsumed();
+
+        Enter(vm, "200");
+        vm.EqualsCommand.Execute(null);
+
+        Assert.Equal("205", vm.Display);
+    }
+
+    [Fact]
     public void GetSessionDisplay_AfterError_ReturnsZero()
     {
         var vm = CreateSut();
@@ -334,6 +367,48 @@ public class MainViewModelTests
         vm.RestoreSession("not a number", Array.Empty<HistoryEntry>());
 
         Assert.Equal("0", vm.Display);
+    }
+
+    // ----------------------------------------------------------------
+    // Toggle истории
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public void IsHistoryVisible_DefaultsToTrue()
+    {
+        var vm = CreateSut();
+        Assert.True(vm.IsHistoryVisible);
+    }
+
+    [Fact]
+    public void ToggleHistoryCommand_FlipsIsHistoryVisible()
+    {
+        var vm = CreateSut();
+
+        vm.ToggleHistoryCommand.Execute(null);
+        Assert.False(vm.IsHistoryVisible);
+
+        vm.ToggleHistoryCommand.Execute(null);
+        Assert.True(vm.IsHistoryVisible);
+    }
+
+    [Fact]
+    public void HistoryToggleLabel_UsesCorrectKey_BasedOnState()
+    {
+        // Локальный setup loc-мока: возвращаем разные строки для разных ключей.
+        var loc = new Mock<ILocalizationService>();
+        loc.Setup(l => l.Get("Main_HideHistory")).Returns("HIDE");
+        loc.Setup(l => l.Get("Main_ShowHistory")).Returns("SHOW");
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(AppSettings.CreateDefault());
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object);
+
+        Assert.Equal("HIDE", vm.HistoryToggleLabel);
+        vm.ToggleHistoryCommand.Execute(null);
+        Assert.Equal("SHOW", vm.HistoryToggleLabel);
     }
 
     // ----------------------------------------------------------------

@@ -1,13 +1,19 @@
+using GsmCalculator.Models;
+
 namespace GsmCalculator.Services;
 
 /// <summary>
-/// Открывает модальное окно создания пользовательского виджета.
+/// Открывает модальное окно создания/редактирования виджета.
 /// </summary>
 public interface ICreateWidgetWindowService
 {
     /// <summary>
-    /// Показать диалог создания виджета.
-    /// Возвращает true, если пользователь создал виджет (нажал «Сохранить»).
+    /// Показать диалог создания/редактирования виджета.
     /// </summary>
-    bool OpenDialog();
+    /// <param name="toEdit">
+    /// null — режим создания (новый виджет).
+    /// Не-null — режим редактирования (префилл из переданного widget'а).
+    /// </param>
+    /// <returns>true если пользователь нажал «Сохранить».</returns>
+    bool OpenDialog(Widget? toEdit = null);
 }

@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:helpers="clr-namespace:GsmCalculator.Helpers"
         mc:Ignorable="d"
-        Title="{DynamicResource CreateWidget_Title}"
+        Title="{Binding WindowTitle}"
         WindowStyle="ToolWindow"
         ResizeMode="NoResize"
         SizeToContent="Height"

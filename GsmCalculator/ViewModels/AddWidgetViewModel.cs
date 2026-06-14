@@ -31,6 +31,7 @@ public class AddWidgetViewModel : ViewModelBase, IDisposable
     }
 
     public ICommand OpenWidgetCommand { get; }
+    public ICommand EditWidgetCommand { get; }
     public ICommand CreateWidgetCommand { get; }
     public ICommand DeleteWidgetCommand { get; }
 
@@ -49,6 +50,12 @@ public class AddWidgetViewModel : ViewModelBase, IDisposable
 
         OpenWidgetCommand = new RelayCommand(
             _ => OpenSelected(),
+            _ => SelectedWidget != null);
+
+        // Редактировать можно ЛЮБОЙ виджет (включая встроенные —
+        // их IsBuiltIn-флаг защищён на уровне WidgetService.Update).
+        EditWidgetCommand = new RelayCommand(
+            _ => EditSelected(),
             _ => SelectedWidget != null);
 
         CreateWidgetCommand = new RelayCommand(_ => CreateNew());
@@ -88,6 +95,16 @@ public class AddWidgetViewModel : ViewModelBase, IDisposable
     {
         // Модальный диалог создания. Вернёт true, если виджет создан.
         if (_createWidget.OpenDialog())
+            RefreshList();
+    }
+
+    private void EditSelected()
+    {
+        var item = SelectedWidget;
+        if (item == null) return;
+
+        // Тот же диалог что Create, но с префиллом из выбранного виджета.
+        if (_createWidget.OpenDialog(item.Widget))
             RefreshList();
     }
 

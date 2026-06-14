@@ -107,6 +107,21 @@ public class MainViewModel : ViewModelBase
     public double GetDisplayValue()
         => double.TryParse(_display, NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0;
 
+    /// <summary>
+    /// Помечает что текущее значение дисплея было «использовано» внешним
+    /// потребителем (например, виджет прочитал его через GetDisplayValue
+    /// для конвертации). Следующий ввод цифры будет начинать новое число,
+    /// а не дописывать к текущему — как после нажатия =.
+    ///
+    /// _pendingOp намеренно НЕ очищается: если пользователь был в середине
+    /// выражения «5 + 100», взял 100 в виджет и потом ввёл 200, ожидается
+    /// что = даст 5 + 200, а не сброс операции.
+    /// </summary>
+    public void NotifyDisplayConsumed()
+    {
+        _isNewNumber = true;
+    }
+
     public void SetDisplayValue(double value)
     {
         Display = _calc.FormatNumber(value);

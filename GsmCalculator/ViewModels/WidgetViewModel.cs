@@ -119,6 +119,10 @@ public class WidgetViewModel : ViewModelBase, IDisposable
     private void Convert(bool isLtoKg)
     {
         var input = _mainVm.GetDisplayValue();
+        // Помечаем что значение калькулятора было использовано — следующая
+        // цифра должна начать новое число, а не дописать к существующему.
+        // Иначе сценарий «100 → виджет → 200» давал бы «100200» на дисплее.
+        _mainVm.NotifyDisplayConsumed();
         _last = new LastConversion(input, _density, _decimalPlaces, isLtoKg);
         ComputeAndShow();
     }

@@ -304,6 +304,39 @@ public class MainViewModelTests
     }
 
     [Fact]
+    public void NotifyDisplayConsumed_NextDigitStartsNewNumber()
+    {
+        // Сценарий: пользователь ввёл 100, виджет прочитал значение
+        // через GetDisplayValue, затем пользователь вводит 200.
+        // Должно быть 200, а не 100200.
+        var vm = CreateSut();
+        Enter(vm, "100");
+
+        _ = vm.GetDisplayValue();
+        vm.NotifyDisplayConsumed();
+
+        Enter(vm, "200");
+        Assert.Equal("200", vm.Display);
+    }
+
+    [Fact]
+    public void NotifyDisplayConsumed_PreservesPendingOperation()
+    {
+        // 5 + 100 → виджет → 200 → = должно дать 205 (5 + 200), а не 200
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "5");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "100");
+
+        vm.NotifyDisplayConsumed();
+
+        Enter(vm, "200");
+        vm.EqualsCommand.Execute(null);
+
+        Assert.Equal("205", vm.Display);
+    }
+
+    [Fact]
     public void GetSessionDisplay_AfterError_ReturnsZero()
     {
         var vm = CreateSut();

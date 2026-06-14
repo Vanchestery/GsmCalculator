@@ -69,11 +69,16 @@ public partial class App : Application
 
     /// <summary>
     /// Применяет сохранённое состояние главного окна: позицию, размер,
-    /// maximized-флаг. Если состояние отсутствует или вне экранов
-    /// (например, монитор отключили) — центрирует окно.
+    /// maximized-флаг, видимость истории. Если состояние отсутствует или
+    /// вне экранов — центрирует окно и сжимает по содержимому (Auto-size).
     /// </summary>
     private static void ApplyWindowState(Window window, MainWindowState? state)
     {
+        // IsHistoryVisible применяется к VM в любом случае — она сама
+        // через PropertyChanged триггерит physical layout в code-behind.
+        if (window.DataContext is MainViewModel vm)
+            vm.IsHistoryVisible = state?.IsHistoryVisible ?? true;
+
         if (state != null && ScreenHelper.IsOnScreen(state.Left, state.Top))
         {
             window.WindowStartupLocation = WindowStartupLocation.Manual;
@@ -86,7 +91,12 @@ public partial class App : Application
         }
         else
         {
-            // Первый запуск или невалидная позиция — центрируем на экране.
+            // Первый запуск или невалидная позиция:
+            // - SizeToContent даёт «Auto»-размер по содержимому (компактнее чем XAML-дефолт)
+            // - CenterScreen центрирует с учётом вычисленного размера
+            // MainWindow.OnLoaded возвращает SizeToContent в Manual, чтобы дальше
+            // пользователь мог ресайзить мышкой.
+            window.SizeToContent = SizeToContent.WidthAndHeight;
             window.WindowStartupLocation = WindowStartupLocation.CenterScreen;
         }
     }
@@ -191,13 +201,15 @@ public partial class App : Application
                 bounds = new Rect(window.Left, window.Top, window.Width, window.Height);
 
             var windowStateService = Services.GetRequiredService<IWindowStateService>();
+            var mainVm = Services.GetRequiredService<MainViewModel>();
             windowStateService.Save(new MainWindowState
             {
                 Left = bounds.Left,
                 Top = bounds.Top,
                 Width = bounds.Width,
                 Height = bounds.Height,
-                IsMaximized = window.WindowState == System.Windows.WindowState.Maximized
+                IsMaximized = window.WindowState == System.Windows.WindowState.Maximized,
+                IsHistoryVisible = mainVm.IsHistoryVisible
             });
         }
         catch

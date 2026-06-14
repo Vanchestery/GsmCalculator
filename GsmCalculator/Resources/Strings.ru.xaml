@@ -24,6 +24,8 @@
     <sys:String x:Key="Main_AddWidget">Добавить виджет</sys:String>
     <sys:String x:Key="Main_Settings">Настройки</sys:String>
     <sys:String x:Key="Main_History">История</sys:String>
+    <sys:String x:Key="Main_HideHistory">Скрыть историю</sys:String>
+    <sys:String x:Key="Main_ShowHistory">Показать историю</sys:String>
 
     <!-- Виджет -->
     <sys:String x:Key="Widget_Density">Плотность:</sys:String>

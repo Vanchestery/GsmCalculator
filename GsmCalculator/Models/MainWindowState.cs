@@ -24,4 +24,11 @@ public class MainWindowState
 
     /// <summary>True если окно было развёрнуто на весь экран при закрытии.</summary>
     public bool IsMaximized { get; set; }
+
+    /// <summary>
+    /// True если панель истории была видна при закрытии. По умолчанию true.
+    /// Связано с layout окна (а не с behavior), поэтому хранится здесь,
+    /// а не в AppSettings.
+    /// </summary>
+    public bool IsHistoryVisible { get; set; } = true;
 }

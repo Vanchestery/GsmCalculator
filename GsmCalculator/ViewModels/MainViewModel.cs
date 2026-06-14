@@ -58,6 +58,26 @@ public class MainViewModel : ViewModelBase
     public int HistorySize { get; private set; }
     public CalculatorMode Mode => _mode;
 
+    private bool _isHistoryVisible = true;
+    /// <summary>Видна ли панель истории. Состояние сохраняется в window-state.json.</summary>
+    public bool IsHistoryVisible
+    {
+        get => _isHistoryVisible;
+        set
+        {
+            if (SetProperty(ref _isHistoryVisible, value))
+                OnPropertyChanged(nameof(HistoryToggleLabel));
+        }
+    }
+
+    /// <summary>
+    /// Локализованная подпись кнопки переключения истории.
+    /// Реактивно меняется при смене IsHistoryVisible и при смене языка
+    /// (см. подписку на LanguageChanged в конструкторе).
+    /// </summary>
+    public string HistoryToggleLabel
+        => _loc.Get(_isHistoryVisible ? "Main_HideHistory" : "Main_ShowHistory");
+
     // --- Команды ---
     public ICommand DigitCommand { get; }
     public ICommand DecimalCommand { get; }
@@ -69,6 +89,7 @@ public class MainViewModel : ViewModelBase
     public ICommand NegateCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand OpenAddWidgetCommand { get; }
+    public ICommand ToggleHistoryCommand { get; }
 
     public MainViewModel(
         ICalculatorService calc,
@@ -98,6 +119,11 @@ public class MainViewModel : ViewModelBase
 
         OpenSettingsCommand = new RelayCommand(_ => _settingsWindow.OpenDialog());
         OpenAddWidgetCommand = new RelayCommand(_ => _addWidgetWindow.OpenDialog());
+        ToggleHistoryCommand = new RelayCommand(_ => IsHistoryVisible = !IsHistoryVisible);
+
+        // MainViewModel — singleton, поэтому отписка не нужна (живёт до конца процесса).
+        // При смене языка перерисовываем подпись кнопки toggle.
+        _loc.LanguageChanged += (_, _) => OnPropertyChanged(nameof(HistoryToggleLabel));
     }
 
     // =================================================================

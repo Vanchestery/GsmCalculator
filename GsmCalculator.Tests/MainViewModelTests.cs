@@ -370,6 +370,48 @@ public class MainViewModelTests
     }
 
     // ----------------------------------------------------------------
+    // Toggle истории
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public void IsHistoryVisible_DefaultsToTrue()
+    {
+        var vm = CreateSut();
+        Assert.True(vm.IsHistoryVisible);
+    }
+
+    [Fact]
+    public void ToggleHistoryCommand_FlipsIsHistoryVisible()
+    {
+        var vm = CreateSut();
+
+        vm.ToggleHistoryCommand.Execute(null);
+        Assert.False(vm.IsHistoryVisible);
+
+        vm.ToggleHistoryCommand.Execute(null);
+        Assert.True(vm.IsHistoryVisible);
+    }
+
+    [Fact]
+    public void HistoryToggleLabel_UsesCorrectKey_BasedOnState()
+    {
+        // Локальный setup loc-мока: возвращаем разные строки для разных ключей.
+        var loc = new Mock<ILocalizationService>();
+        loc.Setup(l => l.Get("Main_HideHistory")).Returns("HIDE");
+        loc.Setup(l => l.Get("Main_ShowHistory")).Returns("SHOW");
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(AppSettings.CreateDefault());
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object);
+
+        Assert.Equal("HIDE", vm.HistoryToggleLabel);
+        vm.ToggleHistoryCommand.Execute(null);
+        Assert.Equal("SHOW", vm.HistoryToggleLabel);
+    }
+
+    // ----------------------------------------------------------------
     // Команды открытия окон — Moq Verify
     // ----------------------------------------------------------------
 

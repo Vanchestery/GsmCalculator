@@ -29,7 +29,8 @@ public static class AppPaths
         }
     }
 
-    public static string SettingsFile => Path.Combine(AppDataDir, "settings.json");
-    public static string WidgetsFile  => Path.Combine(AppDataDir, "widgets.json");
-    public static string SessionFile  => Path.Combine(AppDataDir, "session.json");
+    public static string SettingsFile    => Path.Combine(AppDataDir, "settings.json");
+    public static string WidgetsFile     => Path.Combine(AppDataDir, "widgets.json");
+    public static string SessionFile     => Path.Combine(AppDataDir, "session.json");
+    public static string WindowStateFile => Path.Combine(AppDataDir, "window-state.json");
 }

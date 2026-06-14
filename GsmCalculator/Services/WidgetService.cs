@@ -30,6 +30,27 @@ public class WidgetService : IWidgetService
         SaveAll();
     }
 
+    public void Update(Widget widget)
+    {
+        if (widget is null) throw new ArgumentNullException(nameof(widget));
+        if (string.IsNullOrWhiteSpace(widget.Name))
+            throw new ArgumentException("Имя виджета не может быть пустым.", nameof(widget));
+
+        var existing = Find(widget.Id);
+        if (existing is null) return;
+
+        // Обновляем поля, но IsBuiltIn НЕ трогаем — инвариант сервиса:
+        // встроенный виджет остаётся встроенным даже после редактирования,
+        // т.е. его всё равно нельзя удалить. ViewModel не сможет «случайно
+        // обнулить» этот флаг через подсунутый widget.IsBuiltIn=false.
+        existing.Name = widget.Name;
+        existing.DensityMode = widget.DensityMode;
+        existing.DefaultDensity = widget.DefaultDensity;
+        existing.DefaultDecimalPlaces = widget.DefaultDecimalPlaces;
+
+        SaveAll();
+    }
+
     public void Remove(Guid widgetId)
     {
         var w = Find(widgetId);

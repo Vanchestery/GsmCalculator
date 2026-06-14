@@ -59,6 +59,7 @@
     <sys:String x:Key="AddWidget_Title">Добавить виджет</sys:String>
     <sys:String x:Key="AddWidget_Available">Доступные виджеты</sys:String>
     <sys:String x:Key="AddWidget_Open">Открыть</sys:String>
+    <sys:String x:Key="AddWidget_Edit">Изменить</sys:String>
     <sys:String x:Key="AddWidget_CreateNew">Создать новый…</sys:String>
     <sys:String x:Key="AddWidget_Delete">Удалить</sys:String>
     <sys:String x:Key="AddWidget_DeleteTitle">Удаление виджета</sys:String>
@@ -72,6 +73,7 @@
 
     <!-- Окно «Создать виджет» -->
     <sys:String x:Key="CreateWidget_Title">Создать виджет</sys:String>
+    <sys:String x:Key="CreateWidget_TitleEdit">Изменить виджет</sys:String>
     <sys:String x:Key="CreateWidget_Name">Название</sys:String>
     <sys:String x:Key="CreateWidget_DensityType">Тип плотности</sys:String>
     <sys:String x:Key="CreateWidget_Fixed">Фиксированная</sys:String>

@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Windows;
+using GsmCalculator.Models;
 using GsmCalculator.ViewModels;
 using GsmCalculator.Views;
 using Microsoft.Extensions.DependencyInjection;
@@ -16,11 +17,12 @@ public class CreateWidgetWindowService : ICreateWidgetWindowService
         _sp = sp;
     }
 
-    public bool OpenDialog()
+    public bool OpenDialog(Widget? toEdit = null)
     {
         var vm = new CreateWidgetViewModel(
             _sp.GetRequiredService<IWidgetService>(),
-            _sp.GetRequiredService<ILocalizationService>());
+            _sp.GetRequiredService<ILocalizationService>(),
+            toEdit);
 
         var window = new CreateWidgetWindow
         {

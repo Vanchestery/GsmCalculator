@@ -97,6 +97,85 @@ public class WidgetServiceTests : IDisposable
     }
 
     [Fact]
+    public void Update_BuiltInWidget_PreservesIsBuiltIn_AndUpdatesOtherFields()
+    {
+        var sut = new WidgetService(_tempFile);
+        var builtIn = sut.GetAll().First(w => w is { IsBuiltIn: true, Name: "АИ-92" });
+
+        sut.Update(new Widget
+        {
+            Id = builtIn.Id,
+            Name = "АИ-95 модифицированный",
+            DensityMode = DensityMode.Fixed,
+            DefaultDensity = 0.77,
+            DefaultDecimalPlaces = 3,
+            // Пытаемся «обнулить» флаг — сервис должен это проигнорировать.
+            IsBuiltIn = false
+        });
+
+        var updated = sut.Find(builtIn.Id);
+        Assert.NotNull(updated);
+        Assert.Equal("АИ-95 модифицированный", updated!.Name);
+        Assert.Equal(DensityMode.Fixed, updated.DensityMode);
+        Assert.Equal(0.77, updated.DefaultDensity);
+        Assert.Equal(3, updated.DefaultDecimalPlaces);
+        Assert.True(updated.IsBuiltIn, "IsBuiltIn должен остаться true после Update");
+    }
+
+    [Fact]
+    public void Update_PersistsChanges()
+    {
+        var sut = new WidgetService(_tempFile);
+        var any = sut.GetAll().First();
+
+        sut.Update(new Widget
+        {
+            Id = any.Id,
+            Name = "Изменённый",
+            DensityMode = any.DensityMode,
+            DefaultDensity = any.DefaultDensity,
+            DefaultDecimalPlaces = any.DefaultDecimalPlaces
+        });
+
+        // Перечитываем с диска новым сервисом.
+        var reloaded = new WidgetService(_tempFile);
+        var loaded = reloaded.Find(any.Id);
+        Assert.NotNull(loaded);
+        Assert.Equal("Изменённый", loaded!.Name);
+    }
+
+    [Fact]
+    public void Update_UnknownId_DoesNothing()
+    {
+        var sut = new WidgetService(_tempFile);
+        var beforeCount = sut.GetAll().Count;
+
+        // Не должно бросить, не должно ничего добавить.
+        sut.Update(new Widget
+        {
+            Id = Guid.NewGuid(),
+            Name = "Несуществующий",
+            DefaultDensity = 1.0
+        });
+
+        Assert.Equal(beforeCount, sut.GetAll().Count);
+    }
+
+    [Fact]
+    public void Update_EmptyName_Throws()
+    {
+        var sut = new WidgetService(_tempFile);
+        var any = sut.GetAll().First();
+
+        Assert.Throws<ArgumentException>(() => sut.Update(new Widget
+        {
+            Id = any.Id,
+            Name = "",
+            DefaultDensity = 1.0
+        }));
+    }
+
+    [Fact]
     public void Remove_CustomWidget_RemovesIt()
     {
         var sut = new WidgetService(_tempFile);

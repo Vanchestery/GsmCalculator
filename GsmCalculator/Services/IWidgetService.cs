@@ -18,6 +18,14 @@ public interface IWidgetService
     void Add(Widget widget);
 
     /// <summary>
+    /// Обновить существующий виджет (по Id). Поля Name/DensityMode/DefaultDensity/
+    /// DefaultDecimalPlaces перезаписываются; IsBuiltIn НЕ меняется — встроенный
+    /// остаётся встроенным, пользовательский — пользовательским.
+    /// Если виджет с таким Id не найден — no-op.
+    /// </summary>
+    void Update(Widget widget);
+
+    /// <summary>
     /// Удалить пользовательский виджет. Бросает <see cref="InvalidOperationException"/>
     /// при попытке удалить встроенный.
     /// </summary>

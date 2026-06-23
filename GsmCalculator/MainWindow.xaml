@@ -128,6 +128,14 @@
                     FontFamily="Segoe MDL2 Assets" FontSize="16" Padding="10,8"
                     ToolTip="{Binding HistoryToggleLabel}"
                     Command="{Binding ToggleHistoryCommand}"/>
+            <!-- Циклическая кнопка округления. Подпись на кнопке — короткий индикатор
+                 текущего режима («∞», «1», «0.1»). FontFamily не Segoe MDL2 —
+                 здесь обычные символы/цифры. Клик переключает: None→Integer→OneTenth→None. -->
+            <Button Content="{Binding RoundingIndicator}"
+                    Style="{StaticResource TopBarButtonStyle}"
+                    FontSize="13" FontWeight="Bold" Padding="10,8" MinWidth="40"
+                    ToolTip="{Binding RoundingTooltip}"
+                    Command="{Binding CycleRoundingModeCommand}"/>
         </StackPanel>
 
         <!-- ДИСПЛЕЙ (двухстрочный: превью выражения + текущее число) -->

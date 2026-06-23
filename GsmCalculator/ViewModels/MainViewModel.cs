@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text;
 using System.Windows.Input;
+using GsmCalculator.Helpers;
 using GsmCalculator.Models;
 using GsmCalculator.Services;
 
@@ -24,6 +25,7 @@ public class MainViewModel : ViewModelBase
     private readonly ILocalizationService _loc;
 
     private CalculatorMode _mode;
+    private RoundingMode _roundingMode;
 
     // --- Classic mode state ---
     private double _leftOperand;
@@ -58,6 +60,35 @@ public class MainViewModel : ViewModelBase
     public int HistorySize { get; private set; }
     public CalculatorMode Mode => _mode;
 
+    /// <summary>
+    /// Текущий режим округления (None / Integer / OneTenth). Управляется
+    /// циклической кнопкой в топ-баре. При смене — сохраняется в settings.json.
+    /// </summary>
+    public RoundingMode RoundingMode
+    {
+        get => _roundingMode;
+        private set
+        {
+            if (SetProperty(ref _roundingMode, value))
+            {
+                OnPropertyChanged(nameof(RoundingIndicator));
+                OnPropertyChanged(nameof(RoundingTooltip));
+            }
+        }
+    }
+
+    /// <summary>Короткая подпись на кнопке («∞», «1», «0.1»).</summary>
+    public string RoundingIndicator => RoundingFormatter.Indicator(_roundingMode);
+
+    /// <summary>Локализованный тултип («Округление: до целых» и т.д.).</summary>
+    public string RoundingTooltip => _loc.Get(_roundingMode switch
+    {
+        Models.RoundingMode.None     => "Main_Rounding_None",
+        Models.RoundingMode.Integer  => "Main_Rounding_Integer",
+        Models.RoundingMode.OneTenth => "Main_Rounding_OneTenth",
+        _                            => "Main_Rounding_None"
+    });
+
     private bool _isHistoryVisible = true;
     /// <summary>Видна ли панель истории. Состояние сохраняется в window-state.json.</summary>
     public bool IsHistoryVisible
@@ -90,6 +121,7 @@ public class MainViewModel : ViewModelBase
     public ICommand OpenSettingsCommand { get; }
     public ICommand OpenAddWidgetCommand { get; }
     public ICommand ToggleHistoryCommand { get; }
+    public ICommand CycleRoundingModeCommand { get; }
 
     public MainViewModel(
         ICalculatorService calc,
@@ -107,6 +139,7 @@ public class MainViewModel : ViewModelBase
         var loaded = settings.Load();
         HistorySize = loaded.HistorySize;
         _mode = loaded.CalculatorMode;
+        _roundingMode = loaded.RoundingMode;
 
         DigitCommand = new RelayCommand<string>(AppendDigit);
         DecimalCommand = new RelayCommand(_ => AppendDecimal());
@@ -120,10 +153,15 @@ public class MainViewModel : ViewModelBase
         OpenSettingsCommand = new RelayCommand(_ => _settingsWindow.OpenDialog());
         OpenAddWidgetCommand = new RelayCommand(_ => _addWidgetWindow.OpenDialog());
         ToggleHistoryCommand = new RelayCommand(_ => IsHistoryVisible = !IsHistoryVisible);
+        CycleRoundingModeCommand = new RelayCommand(_ => CycleRoundingMode());
 
         // MainViewModel — singleton, поэтому отписка не нужна (живёт до конца процесса).
-        // При смене языка перерисовываем подпись кнопки toggle.
-        _loc.LanguageChanged += (_, _) => OnPropertyChanged(nameof(HistoryToggleLabel));
+        // При смене языка перерисовываем подписи привязанных строк.
+        _loc.LanguageChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HistoryToggleLabel));
+            OnPropertyChanged(nameof(RoundingTooltip));
+        };
     }
 
     // =================================================================
@@ -150,7 +188,11 @@ public class MainViewModel : ViewModelBase
 
     public void SetDisplayValue(double value)
     {
-        Display = _calc.FormatNumber(value);
+        // Применяем округление по текущему режиму — виджет «Вставить в калькулятор»
+        // даёт точное число конвертации, но юзер хочет увидеть его уже округлённым
+        // (по K.4 — в учёте ГСМ работают именно с округлённой величиной).
+        var rounded = RoundingFormatter.Apply(value, _roundingMode);
+        Display = _calc.FormatNumber(rounded);
         ResetCalculationState();
         ExpressionPreview = "";
         _justEvaluated = false;
@@ -169,6 +211,25 @@ public class MainViewModel : ViewModelBase
         if (_mode == mode) return;
         _mode = mode;
         Clear();
+    }
+
+    /// <summary>
+    /// Циклически переключает режим округления (None → Integer → OneTenth → None).
+    /// Сохраняет новый режим в settings.json через ISettingsService.
+    ///
+    /// Не пересчитывает то что уже на дисплее — округление применяется только
+    /// к НОВЫМ результатам (по K.5 = Y «округление в момент =»). История тоже
+    /// не пересчитывается (по K.6 — округление в момент записи).
+    /// </summary>
+    public void CycleRoundingMode()
+    {
+        RoundingMode = RoundingFormatter.Next(_roundingMode);
+
+        // Сохраняем. Load+Save паттерн используется чтобы не потерять остальные
+        // поля настроек (тема, язык и т.д., которые меняются в SettingsViewModel).
+        var s = _settings.Load();
+        s.RoundingMode = _roundingMode;
+        _settings.Save(s);
     }
 
     /// <summary>Значение дисплея для сохранения в сессию. В состоянии ошибки — «0».</summary>
@@ -319,6 +380,10 @@ public class MainViewModel : ViewModelBase
         try
         {
             var result = _calc.Apply(_leftOperand, op, right);
+            // K.5=Y: округляем «на фиксировании» — это и нажатие =,
+            // и нажатие следующего оператора (он закрывает предыдущий операнд).
+            // Аккумулятор уносит уже округлённое — дальнейшая цепочка считает с него.
+            result = RoundingFormatter.Apply(result, _roundingMode);
             AddToHistory(_calc.FormatExpression(_leftOperand, op, right), _calc.FormatNumber(result));
             Display = _calc.FormatNumber(result);
             _leftOperand = result;
@@ -379,6 +444,9 @@ public class MainViewModel : ViewModelBase
         try
         {
             var result = EvaluateWithPrecedence(allOperands, allOps);
+            // K.5=Y: округление на =. В Engineering выражение считается «одним хапом»,
+            // поэтому промежуточные операнды округлению не подвергаются — только итог.
+            result = RoundingFormatter.Apply(result, _roundingMode);
             var resultStr = _calc.FormatNumber(result);
 
             AddToHistory(expression, resultStr);

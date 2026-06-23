@@ -29,6 +29,13 @@ public class AppSettings
     public CalculatorMode CalculatorMode { get; set; } = CalculatorMode.Classic;
 
     /// <summary>
+    /// Режим округления значений калькулятора (см. <see cref="Models.RoundingMode"/>).
+    /// По умолчанию None — без округления, чтобы не сломать привычку юзеров v1.0/v1.1.
+    /// Изменяется кнопкой-циклом в топ-баре главного окна, не в окне Настроек.
+    /// </summary>
+    public RoundingMode RoundingMode { get; set; } = RoundingMode.None;
+
+    /// <summary>
     /// Возвращает копию настроек по умолчанию.
     /// Используется при первом запуске или сбросе настроек.
     /// </summary>

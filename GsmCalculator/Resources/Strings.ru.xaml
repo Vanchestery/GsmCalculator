@@ -26,6 +26,9 @@
     <sys:String x:Key="Main_History">История</sys:String>
     <sys:String x:Key="Main_HideHistory">Скрыть историю</sys:String>
     <sys:String x:Key="Main_ShowHistory">Показать историю</sys:String>
+    <sys:String x:Key="Main_Rounding_None">Округление: выкл</sys:String>
+    <sys:String x:Key="Main_Rounding_Integer">Округление: до целых</sys:String>
+    <sys:String x:Key="Main_Rounding_OneTenth">Округление: до 0.1</sys:String>
 
     <!-- Виджет -->
     <sys:String x:Key="Widget_Density">Плотность:</sys:String>

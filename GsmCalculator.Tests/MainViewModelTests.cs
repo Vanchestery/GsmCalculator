@@ -20,13 +20,15 @@ public class MainViewModelTests
     /// <summary>Фабрика VM с реальным калькулятором и Moq-зависимостями.</summary>
     private static MainViewModel CreateSut(
         int historySize = 10,
-        CalculatorMode mode = CalculatorMode.Classic)
+        CalculatorMode mode = CalculatorMode.Classic,
+        RoundingMode rounding = RoundingMode.None)
     {
         var settings = new Mock<ISettingsService>();
         settings.Setup(s => s.Load()).Returns(new AppSettings
         {
             HistorySize = historySize,
-            CalculatorMode = mode
+            CalculatorMode = mode,
+            RoundingMode = rounding
         });
 
         var loc = new Mock<ILocalizationService>();
@@ -447,5 +449,192 @@ public class MainViewModelTests
         vm.OpenAddWidgetCommand.Execute(null);
 
         addWidget.Verify(a => a.OpenDialog(), Times.Once);
+    }
+
+    // ----------------------------------------------------------------
+    // Блок K — Режим округления
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public void RoundingMode_DefaultsToNone_FromSettings()
+    {
+        var vm = CreateSut(); // rounding=None по умолчанию
+        Assert.Equal(RoundingMode.None, vm.RoundingMode);
+    }
+
+    [Fact]
+    public void RoundingMode_InitializedFromSettings()
+    {
+        var vm = CreateSut(rounding: RoundingMode.Integer);
+        Assert.Equal(RoundingMode.Integer, vm.RoundingMode);
+    }
+
+    [Fact]
+    public void CycleRoundingModeCommand_CyclesNoneIntegerOneTenthBack()
+    {
+        var vm = CreateSut(rounding: RoundingMode.None);
+
+        vm.CycleRoundingModeCommand.Execute(null);
+        Assert.Equal(RoundingMode.Integer, vm.RoundingMode);
+
+        vm.CycleRoundingModeCommand.Execute(null);
+        Assert.Equal(RoundingMode.OneTenth, vm.RoundingMode);
+
+        vm.CycleRoundingModeCommand.Execute(null);
+        Assert.Equal(RoundingMode.None, vm.RoundingMode);
+    }
+
+    [Fact]
+    public void CycleRoundingMode_PersistsToSettings()
+    {
+        // Готовим мок настроек явно — нужен Verify на Save.
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(new AppSettings { RoundingMode = RoundingMode.None });
+        AppSettings? saved = null;
+        settings.Setup(s => s.Save(It.IsAny<AppSettings>()))
+                .Callback<AppSettings>(s => saved = s);
+
+        var loc = new Mock<ILocalizationService>();
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object);
+
+        vm.CycleRoundingModeCommand.Execute(null);
+
+        Assert.NotNull(saved);
+        Assert.Equal(RoundingMode.Integer, saved!.RoundingMode);
+    }
+
+    // -- K.5 = Y: округление на каждом фиксировании результата (Classic) --
+
+    [Fact]
+    public void Classic_EqualsRoundsResult_Integer()
+    {
+        var vm = CreateSut(rounding: RoundingMode.Integer);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "7");
+        vm.EqualsCommand.Execute(null);
+
+        Assert.Equal("151", vm.Display);
+    }
+
+    [Fact]
+    public void Classic_EqualsRoundsResult_OneTenth()
+    {
+        var vm = CreateSut(rounding: RoundingMode.OneTenth);
+        // 100 + 50.77 = 150.77 → 150.8 при OneTenth.
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "77");
+        vm.EqualsCommand.Execute(null);
+
+        Assert.Equal("150.8", vm.Display);
+    }
+
+    [Fact]
+    public void Classic_ChainAfterEquals_UsesRoundedAccumulator()
+    {
+        // K.5=Y: после = аккумулятор становится округлённым числом.
+        // Следующая операция строится от него.
+        var vm = CreateSut(rounding: RoundingMode.Integer);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "7");
+        vm.EqualsCommand.Execute(null);
+        // Сейчас display="151", accumulator=151.
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "0");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "4");
+        vm.EqualsCommand.Execute(null);
+        // 151 + 0.4 = 151.4 → 151 при Integer.
+        Assert.Equal("151", vm.Display);
+    }
+
+    [Fact]
+    public void Classic_OperatorMidExpression_RoundsIntermediate()
+    {
+        // Нажатие нового оператора фиксирует предыдущий результат — он тоже округляется.
+        var vm = CreateSut(rounding: RoundingMode.Integer);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "7");
+        vm.OperationCommand.Execute("+"); // фиксирует 100+50.7=150.7→151
+        Enter(vm, "10");
+        vm.EqualsCommand.Execute(null);
+        // 151 + 10 = 161
+        Assert.Equal("161", vm.Display);
+    }
+
+    // -- K.5 = Y: округление на = в Engineering --
+
+    [Fact]
+    public void Engineering_EqualsRoundsResult()
+    {
+        var vm = CreateSut(mode: CalculatorMode.Engineering, rounding: RoundingMode.Integer);
+        // 2 + 3 × 4.7 = 16.1 → 16 при Integer.
+        Enter(vm, "2");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "3");
+        vm.OperationCommand.Execute("×");
+        Enter(vm, "4");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "7");
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("16", vm.Display);
+    }
+
+    // -- Округление в режиме None — точные значения --
+
+    [Fact]
+    public void Classic_NoneMode_PreservesPrecision()
+    {
+        var vm = CreateSut(rounding: RoundingMode.None);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "7");
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("150.7", vm.Display);
+    }
+
+    // -- SetDisplayValue (виджет) применяет округление --
+
+    [Fact]
+    public void SetDisplayValue_AppliesRounding_Integer()
+    {
+        var vm = CreateSut(rounding: RoundingMode.Integer);
+        // Виджет отдал «точное» 73.7 — должно прилететь на дисплей как 74.
+        vm.SetDisplayValue(73.7);
+        Assert.Equal("74", vm.Display);
+    }
+
+    [Fact]
+    public void SetDisplayValue_NoneMode_PreservesValue()
+    {
+        var vm = CreateSut(rounding: RoundingMode.None);
+        vm.SetDisplayValue(73.7);
+        Assert.Equal("73.7", vm.Display);
+    }
+
+    [Fact]
+    public void RoundingIndicator_ReflectsCurrentMode()
+    {
+        var vm = CreateSut(rounding: RoundingMode.None);
+        Assert.Equal("∞", vm.RoundingIndicator);
+        vm.CycleRoundingModeCommand.Execute(null);
+        Assert.Equal("1", vm.RoundingIndicator);
+        vm.CycleRoundingModeCommand.Execute(null);
+        Assert.Equal("0.1", vm.RoundingIndicator);
     }
 }

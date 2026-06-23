@@ -117,13 +117,19 @@ public class SettingsViewModel : ViewModelBase
 
     private void Ok()
     {
+        // RoundingMode управляется не из окна Настроек, а из топ-бар-кнопки
+        // главного окна — сохраняем его текущее значение из файла,
+        // чтобы оно не потерялось при пересохранении остальных настроек.
+        var current = _settingsService.Load();
+
         var updated = new AppSettings
         {
             HistorySize = HistorySize,
             Theme = Theme,
             StartupBehavior = StartupBehavior,
             Language = Language,
-            CalculatorMode = CalculatorMode
+            CalculatorMode = CalculatorMode,
+            RoundingMode = current.RoundingMode
         };
 
         // Сохраняем в settings.json.

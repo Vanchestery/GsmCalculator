@@ -263,25 +263,177 @@ public class MainViewModelTests
         Assert.Equal("12", vm.Display);
     }
 
+    // Блок F (v1.2): Negate команда удалена — кнопка '±' заменена на '%'.
+    // Тесты на унарный минус больше не актуальны.
+
+    // ----------------------------------------------------------------
+    // Блок F — Контекстная команда процентов (Windows Calc Standard style)
+    // ----------------------------------------------------------------
+
     [Fact]
-    public void Negate_TogglesSign()
+    public void Percent_Classic_Plus_AddsPercentOfLeftOperand()
     {
-        var vm = CreateSut();
-        Enter(vm, "5");
-
-        vm.NegateCommand.Execute(null);
-        Assert.Equal("-5", vm.Display);
-
-        vm.NegateCommand.Execute(null);
-        Assert.Equal("5", vm.Display);
+        // 100 + 10% = 100 + (100 × 0.1) = 110
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("10", vm.Display); // 10% от 100 = 10
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("110", vm.Display);
     }
 
     [Fact]
-    public void Negate_OnZero_DoesNothing()
+    public void Percent_Classic_Minus_SubtractsPercentOfLeftOperand()
+    {
+        // 100 − 10% = 100 − (100 × 0.1) = 90
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("-");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("10", vm.Display);
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("90", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_Classic_Multiply_DividesBy100()
+    {
+        // 100 × 10% = 100 × 0.1 = 10
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("×");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("0.1", vm.Display);
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("10", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_Classic_Divide_DividesBy100()
+    {
+        // 100 ÷ 10% = 100 ÷ 0.1 = 1000
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("÷");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("0.1", vm.Display);
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("1000", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_Classic_NoOperator_DividesBy100()
+    {
+        // 10% без оператора = 10 / 100 = 0.1
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("0.1", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_OnZero_GivesZero()
     {
         var vm = CreateSut();
-        vm.NegateCommand.Execute(null);
+        vm.PercentCommand.Execute(null);
         Assert.Equal("0", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_Classic_ChainAfterPercent_AutoEvaluates()
+    {
+        // 100 + 10% + 5 = 115 (matches Windows Calc Standard)
+        // Если % не закрывает чейн — было бы 10+5=15. Это контролирует _justResolvedPercent.
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "5");
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("115", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_DigitAfter_ReplacesDisplay()
+    {
+        // После % следующая цифра должна ЗАМЕНИТЬ дисплей, не дописать.
+        var vm = CreateSut();
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null); // display="10"
+        Enter(vm, "7"); // должен заменить
+        Assert.Equal("7", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_Engineering_AlwaysDividesBy100()
+    {
+        // В Engineering '%' = просто value/100 (как Windows Calc Scientific).
+        // 2 + 3 × 4% = 2 + 3 × 0.04 = 2.12
+        var vm = CreateSut(mode: CalculatorMode.Engineering);
+        Enter(vm, "2");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "3");
+        vm.OperationCommand.Execute("×");
+        Enter(vm, "4");
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("0.04", vm.Display);
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("2.12", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_Engineering_ChainAfterPercent_PreservesPercentValue()
+    {
+        // 2 × 4% + 100 = (2 × 0.04) + 100 = 0.08 + 100 = 100.08
+        // Регрессионный тест: % не должен теряться при последующем операторе.
+        var vm = CreateSut(mode: CalculatorMode.Engineering);
+        Enter(vm, "2");
+        vm.OperationCommand.Execute("×");
+        Enter(vm, "4");
+        vm.PercentCommand.Execute(null);
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "100");
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("100.08", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_InErrorState_DoesNothing()
+    {
+        var vm = CreateSut();
+        Enter(vm, "5");
+        vm.OperationCommand.Execute("÷");
+        Enter(vm, "0");
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("Ошибка", vm.Display);
+
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("Ошибка", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_HistoryRecorded_OnEquals()
+    {
+        // История пишется внутри Apply на = — должна показать «100 + 10 = 110».
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        vm.EqualsCommand.Execute(null);
+
+        Assert.Single(vm.History);
+        Assert.Equal("100 + 10", vm.History[0].Expression);
+        Assert.Equal("110", vm.History[0].Result);
     }
 
     // ----------------------------------------------------------------

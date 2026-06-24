@@ -48,6 +48,8 @@
         <KeyBinding Key="Escape" Command="{Binding ClearCommand}"/>
         <KeyBinding Key="Back"   Command="{Binding BackspaceCommand}"/>
         <KeyBinding Key="Delete" Command="{Binding ClearEntryCommand}"/>
+        <!-- Shift+5 = '%' на большинстве раскладок -->
+        <KeyBinding Key="D5" Modifiers="Shift" Command="{Binding PercentCommand}"/>
     </Window.InputBindings>
 
     <Window.Resources>
@@ -200,7 +202,9 @@
                 <Button Content="+" Style="{StaticResource OpButtonStyle}"   Command="{Binding OperationCommand}" CommandParameter="+"/>
 
                 <!-- ряд 5 -->
-                <Button Content="±" Style="{StaticResource CalcButtonStyle}" Command="{Binding NegateCommand}"/>
+                <!-- '%' заменил '±' в v1.2. Унарный минус больше не доступен —
+                     в ГСМ-учёте редко нужен. -->
+                <Button Content="%" Style="{StaticResource CalcButtonStyle}" Command="{Binding PercentCommand}"/>
                 <Button Content="0" Style="{StaticResource CalcButtonStyle}" Command="{Binding DigitCommand}" CommandParameter="0"/>
                 <Button Content="." Style="{StaticResource CalcButtonStyle}" Command="{Binding DecimalCommand}"/>
                 <Button Content="=" Style="{StaticResource EqualsButtonStyle}" Command="{Binding EqualsCommand}"/>

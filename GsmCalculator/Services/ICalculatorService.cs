@@ -20,6 +20,25 @@ public interface ICalculatorService
     /// </summary>
     double Apply(double a, char op, double b);
 
+    /// <summary>
+    /// Контекстный процент в стиле Windows Calc Standard.
+    /// Возвращает «разрешённое» значение правого операнда для процентной операции,
+    /// которое потом подставляется в обычный <see cref="Apply"/>.
+    ///
+    /// Логика:
+    /// <list type="bullet">
+    /// <item><c>left + rightPercent%</c> → возвращает <c>left × (rightPercent / 100)</c>.
+    ///       Пример: <c>100 + 10%</c> → returns 10, далее <c>100 + 10 = 110</c>.</item>
+    /// <item><c>left − rightPercent%</c> → то же что для +. Пример: <c>100 − 10%</c> → 10 → <c>100 − 10 = 90</c>.</item>
+    /// <item><c>left × rightPercent%</c> → возвращает <c>rightPercent / 100</c>.
+    ///       Пример: <c>100 × 10%</c> → 0.1 → <c>100 × 0.1 = 10</c>.</item>
+    /// <item><c>left ÷ rightPercent%</c> → возвращает <c>rightPercent / 100</c>.
+    ///       Пример: <c>100 ÷ 10%</c> → 0.1 → <c>100 ÷ 0.1 = 1000</c>.</item>
+    /// </list>
+    /// Для незнакомого оператора возвращает простое <c>rightPercent / 100</c>.
+    /// </summary>
+    double ResolvePercent(double left, char op, double rightPercent);
+
     /// <summary>Форматирует число для дисплея. Целое — без точки, дробное — с точкой.</summary>
     string FormatNumber(double value);
 

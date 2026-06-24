@@ -40,6 +40,8 @@ public class MainViewModel : ViewModelBase
     private bool _justEvaluated;   // true сразу после = — чтобы следующая цифра очистила preview
     private bool _isError;         // true когда на дисплее сообщение об ошибке.
                                    // Флаг вместо сравнения строки — текст «Ошибка» локализован.
+    private bool _justResolvedPercent; // true сразу после % — следующий оператор завершит чейн
+                                       // (matches Windows Calc Standard: 100+10%+5 = 115)
 
     private string _display = "0";
     public string Display
@@ -117,7 +119,7 @@ public class MainViewModel : ViewModelBase
     public ICommand ClearCommand { get; }
     public ICommand ClearEntryCommand { get; }
     public ICommand BackspaceCommand { get; }
-    public ICommand NegateCommand { get; }
+    public ICommand PercentCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand OpenAddWidgetCommand { get; }
     public ICommand ToggleHistoryCommand { get; }
@@ -148,7 +150,7 @@ public class MainViewModel : ViewModelBase
         ClearCommand = new RelayCommand(_ => Clear());
         ClearEntryCommand = new RelayCommand(_ => ClearEntry());
         BackspaceCommand = new RelayCommand(_ => Backspace());
-        NegateCommand = new RelayCommand(_ => Negate());
+        PercentCommand = new RelayCommand(_ => HandlePercent());
 
         OpenSettingsCommand = new RelayCommand(_ => _settingsWindow.OpenDialog());
         OpenAddWidgetCommand = new RelayCommand(_ => _addWidgetWindow.OpenDialog());
@@ -198,6 +200,7 @@ public class MainViewModel : ViewModelBase
         _justEvaluated = false;
         _isNewNumber = true;
         _isError = false;
+        _justResolvedPercent = false;
     }
 
     public void ApplyHistorySize(int newSize)
@@ -258,6 +261,7 @@ public class MainViewModel : ViewModelBase
         _isNewNumber = true;
         _justEvaluated = false;
         _isError = false;
+        _justResolvedPercent = false;
     }
 
     // =================================================================
@@ -274,6 +278,8 @@ public class MainViewModel : ViewModelBase
             ExpressionPreview = "";
             _justEvaluated = false;
         }
+        // Юзер перебивает результат %: флаг больше не актуален.
+        _justResolvedPercent = false;
 
         if (_isNewNumber || _display == "0" || _isError)
         {
@@ -294,6 +300,7 @@ public class MainViewModel : ViewModelBase
             ExpressionPreview = "";
             _justEvaluated = false;
         }
+        _justResolvedPercent = false;
 
         if (_isNewNumber || _isError)
         {
@@ -336,10 +343,16 @@ public class MainViewModel : ViewModelBase
 
     private void HandleOperationClassic(char op)
     {
-        if (_isError) { ClearClassicState(); _isNewNumber = true; return; }
+        if (_isError) { ClearClassicState(); _isNewNumber = true; _justResolvedPercent = false; return; }
         _justEvaluated = false; // оператор после = — начало новой цепочки
 
-        if (_pendingOp.HasValue && !_isNewNumber)
+        // После % мы выставляем _isNewNumber=true (цифра ЗАМЕНЯЕТ),
+        // но при этом следующий оператор всё равно должен закрыть чейн.
+        // Поэтому здесь форсируем «нужно вычислить» если только что был %.
+        var needsEvaluation = _pendingOp.HasValue && (!_isNewNumber || _justResolvedPercent);
+        _justResolvedPercent = false; // потребили флаг
+
+        if (needsEvaluation)
         {
             if (!TryEvaluatePendingClassic()) return;
         }
@@ -368,6 +381,7 @@ public class MainViewModel : ViewModelBase
         _justEvaluated = true;
         _pendingOp = null;
         _isNewNumber = true;
+        _justResolvedPercent = false;
     }
 
     private bool TryEvaluatePendingClassic()
@@ -402,10 +416,23 @@ public class MainViewModel : ViewModelBase
 
     private void HandleOperationEngineering(char op)
     {
-        if (_isError) { ClearEngineeringState(); _isNewNumber = true; return; }
+        if (_isError) { ClearEngineeringState(); _isNewNumber = true; _justResolvedPercent = false; return; }
         _justEvaluated = false;
 
-        if (_isNewNumber)
+        // _justResolvedPercent трактуется как «только что доввели число» —
+        // оператор должен зафиксировать процентный результат как операнд,
+        // а не заменить последний оператор.
+        var treatAsFresh = !_isNewNumber || _justResolvedPercent;
+        _justResolvedPercent = false;
+
+        if (treatAsFresh)
+        {
+            // Только что вводили цифры (или закончили %) — фиксируем операнд + оператор.
+            _engOperands.Add(GetDisplayValue());
+            _engOps.Add(op);
+            _isNewNumber = true;
+        }
+        else
         {
             if (_engOps.Count > 0)
             {
@@ -418,13 +445,6 @@ public class MainViewModel : ViewModelBase
                 _engOperands.Add(GetDisplayValue());
                 _engOps.Add(op);
             }
-        }
-        else
-        {
-            // Только что вводили цифры — фиксируем операнд + оператор.
-            _engOperands.Add(GetDisplayValue());
-            _engOps.Add(op);
-            _isNewNumber = true;
         }
 
         UpdateEngineeringPreview();
@@ -456,6 +476,7 @@ public class MainViewModel : ViewModelBase
 
             ClearEngineeringState();
             _isNewNumber = true;
+            _justResolvedPercent = false;
         }
         catch (DivideByZeroException)
         {
@@ -540,6 +561,7 @@ public class MainViewModel : ViewModelBase
         _justEvaluated = false;
         _isNewNumber = true;
         _isError = false;
+        _justResolvedPercent = false;
     }
 
     private void ClearEntry()
@@ -547,15 +569,16 @@ public class MainViewModel : ViewModelBase
         Display = "0";
         _isNewNumber = true;
         _isError = false;
+        _justResolvedPercent = false;
         // Превью оставляем — pendingOp/токены не сбрасываем.
     }
 
     private void Backspace()
     {
         if (_isNewNumber || _display == "0" || _isError) return;
+        _justResolvedPercent = false;
 
-        var isNegativeSingleDigit = _display.Length == 2 && _display[0] == '-';
-        if (_display.Length == 1 || isNegativeSingleDigit)
+        if (_display.Length == 1)
         {
             Display = "0";
             _isNewNumber = true;
@@ -565,10 +588,39 @@ public class MainViewModel : ViewModelBase
         Display = _display[..^1];
     }
 
-    private void Negate()
+    /// <summary>
+    /// Контекстный процент в стиле Windows Calc Standard.
+    ///
+    /// В Classic с ожидающим оператором: процент трактуется относительно
+    /// аккумулятора и оператора (см. <see cref="ICalculatorService.ResolvePercent"/>).
+    /// В Engineering и в Classic без оператора: простое <c>value / 100</c>.
+    ///
+    /// После % следующая цифра ЗАМЕНЯЕТ дисплей (как новый ввод). Чтобы
+    /// корректно продолжить цепочку через оператор («100 + 10% + 5 = 115»),
+    /// используется флаг <see cref="_justResolvedPercent"/> — он заставляет
+    /// HandleOperationClassic «закрыть» предыдущую операцию даже при _isNewNumber=true.
+    /// </summary>
+    private void HandlePercent()
     {
-        if (_display == "0" || _isError) return;
-        Display = _display.StartsWith('-') ? _display[1..] : "-" + _display;
+        if (_isError) return;
+        _justEvaluated = false;
+
+        var current = GetDisplayValue();
+        double resolved;
+
+        if (_mode == CalculatorMode.Classic && _pendingOp.HasValue)
+        {
+            resolved = _calc.ResolvePercent(_leftOperand, _pendingOp.Value, current);
+        }
+        else
+        {
+            // Engineering или Classic без оператора — value/100.
+            resolved = current / 100.0;
+        }
+
+        Display = _calc.FormatNumber(resolved);
+        _isNewNumber = true;
+        _justResolvedPercent = true;
     }
 
     // =================================================================
@@ -601,6 +653,7 @@ public class MainViewModel : ViewModelBase
         ExpressionPreview = "";
         _justEvaluated = false;
         _isNewNumber = true;
+        _justResolvedPercent = false;
     }
 
     private void AddToHistory(string expression, string result)

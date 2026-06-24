@@ -109,11 +109,13 @@ public class MagnetismCalculatorTests
     [Fact]
     public void TryFindSnap_TwoEdgesPossible_PicksCloser()
     {
-        // Сателлит в правом-нижнем углу: близко и к right и к bottom хоста.
-        // Right distance = sat.Left - host.Right.
-        // Bottom distance = sat.Top - host.Bottom.
-        // sat=(602, 508) → right_dist=2, bottom_dist=8 → пикаем Right.
-        var sat = new Rect(602, 508, 200, 150);
+        // Сателлит у правого-нижнего угла, но перекрывается с хостом по обеим осям —
+        // обязательно для проверки тая бера.
+        // sat=(598, 496):
+        //   Right edge: sat.Left=598, |598-host.Right(600)|=2; vertical overlap: 496<500 ✓
+        //   Bottom edge: sat.Top=496, |496-host.Bottom(500)|=4; horizontal overlap: 598<600 ✓
+        // Дистанции 2 vs 4 → выигрывает Right.
+        var sat = new Rect(598, 496, 200, 150);
         var snap = MagnetismCalculator.TryFindSnap(sat, Host, Threshold);
 
         Assert.NotNull(snap);

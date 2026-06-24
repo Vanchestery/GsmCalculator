@@ -100,16 +100,39 @@ public static class MagnetismCalculator
     /// <summary>
     /// Возвращает Left/Top сателлита для того чтобы он сидел в указанном snap-состоянии
     /// относительно текущего положения хоста.
+    ///
+    /// hostInsets/satelliteInsets — невидимые «тени» DWM. Без них была бы видимая
+    /// дырка между окнами в ~14px (см. <see cref="WindowChromeHelper.GetVisualInsets"/>).
+    /// По умолчанию нули — старое поведение для unit-тестов чистой геометрии.
     /// </summary>
     public static (double Left, double Top) ComputePosition(
-        Rect host, SatelliteSnapState state, double satelliteWidth, double satelliteHeight)
+        Rect host, SatelliteSnapState state, double satelliteWidth, double satelliteHeight,
+        Thickness hostInsets = default, Thickness satelliteInsets = default)
     {
         return state.Edge switch
         {
-            SnapEdge.Right => (host.Right, host.Top + state.Offset),
-            SnapEdge.Left  => (host.Left - satelliteWidth, host.Top + state.Offset),
-            SnapEdge.Bottom => (host.Left + state.Offset, host.Bottom),
-            SnapEdge.Top   => (host.Left + state.Offset, host.Top - satelliteHeight),
+            // Визуально: sat.VisualLeft == host.VisualRight
+            // → sat.Left + satInsets.Left = host.Right - hostInsets.Right
+            // → sat.Left = host.Right - hostInsets.Right - satInsets.Left
+            SnapEdge.Right => (
+                host.Right - hostInsets.Right - satelliteInsets.Left,
+                host.Top + state.Offset),
+
+            // Визуально: sat.VisualRight == host.VisualLeft
+            // → sat.Left + sat.Width - satInsets.Right = host.Left + hostInsets.Left
+            // → sat.Left = host.Left + hostInsets.Left + satInsets.Right - sat.Width
+            SnapEdge.Left  => (
+                host.Left + hostInsets.Left + satelliteInsets.Right - satelliteWidth,
+                host.Top + state.Offset),
+
+            SnapEdge.Bottom => (
+                host.Left + state.Offset,
+                host.Bottom - hostInsets.Bottom - satelliteInsets.Top),
+
+            SnapEdge.Top   => (
+                host.Left + state.Offset,
+                host.Top + hostInsets.Top + satelliteInsets.Bottom - satelliteHeight),
+
             _ => (host.Left, host.Top)
         };
     }

@@ -77,13 +77,19 @@ public class WindowMagnetismService : IWindowMagnetismService
 
     /// <summary>
     /// Программно ставит сателлит в положение, продиктованное snap-состоянием.
+    /// Учитывает невидимые «тени» DWM, чтобы визуальные грани прилипали
+    /// без зазора.
     /// </summary>
     private void ApplySnap(Window sat, SatelliteSnapState state)
     {
         if (_host == null) return;
 
+        var hostInsets = WindowChromeHelper.GetVisualInsets(_host);
+        var satInsets = WindowChromeHelper.GetVisualInsets(sat);
+
         var (left, top) = MagnetismCalculator.ComputePosition(
-            WindowRect(_host), state, sat.Width, sat.Height);
+            WindowRect(_host), state, sat.Width, sat.Height,
+            hostInsets, satInsets);
 
         _isPositioningProgrammatically = true;
         try

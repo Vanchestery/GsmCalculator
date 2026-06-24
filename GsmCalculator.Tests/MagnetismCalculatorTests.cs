@@ -179,4 +179,70 @@ public class MagnetismCalculatorTests
         // offset был sat.Top - host.Top = 80; должно дать host.Top + 80 = 180.
         Assert.Equal(180, top);
     }
+
+    // ----------------------------------------------------------------
+    // ComputePosition с DWM-инсетами (фикс gap'а между визуальными гранями)
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public void ComputePosition_Right_WithInsets_RemovesShadowGap()
+    {
+        // Тень 7px с правой грани хоста и 7px с левой грани сателлита.
+        // Без insets: sat.Left = host.Right = 600 → визуально 14px зазор.
+        // С insets:   sat.Left = 600 - 7 - 7 = 586 → визуально 0 зазор.
+        var hostInsets = new Thickness(left: 7, top: 7, right: 7, bottom: 7);
+        var satInsets  = new Thickness(left: 7, top: 7, right: 7, bottom: 7);
+        var state = new SatelliteSnapState(SnapEdge.Right, 50);
+
+        var (left, top) = MagnetismCalculator.ComputePosition(Host, state, 200, 150, hostInsets, satInsets);
+
+        Assert.Equal(586, left); // 600 - 7 - 7
+        Assert.Equal(150, top);
+    }
+
+    [Fact]
+    public void ComputePosition_Left_WithInsets_RemovesShadowGap()
+    {
+        var insets = new Thickness(7);
+        var state = new SatelliteSnapState(SnapEdge.Left, 50);
+
+        var (left, top) = MagnetismCalculator.ComputePosition(Host, state, 200, 150, insets, insets);
+
+        // host.Left + 7 + 7 - 200 = 100 + 14 - 200 = -86
+        Assert.Equal(-86, left);
+        Assert.Equal(150, top);
+    }
+
+    [Fact]
+    public void ComputePosition_Bottom_WithInsets_RemovesShadowGap()
+    {
+        var insets = new Thickness(7);
+        var state = new SatelliteSnapState(SnapEdge.Bottom, 100);
+
+        var (left, top) = MagnetismCalculator.ComputePosition(Host, state, 200, 150, insets, insets);
+
+        Assert.Equal(200, left);
+        Assert.Equal(486, top); // host.Bottom 500 - 7 - 7
+    }
+
+    [Fact]
+    public void ComputePosition_Top_WithInsets_RemovesShadowGap()
+    {
+        var insets = new Thickness(7);
+        var state = new SatelliteSnapState(SnapEdge.Top, 100);
+
+        var (left, top) = MagnetismCalculator.ComputePosition(Host, state, 200, 150, insets, insets);
+
+        Assert.Equal(200, left);
+        Assert.Equal(-36, top); // host.Top 100 + 7 + 7 - 150
+    }
+
+    [Fact]
+    public void ComputePosition_DefaultInsets_BehaviourUnchanged()
+    {
+        // Без insets-параметров — старое поведение (Thickness default = 0).
+        var state = new SatelliteSnapState(SnapEdge.Right, 50);
+        var (left, _) = MagnetismCalculator.ComputePosition(Host, state, 200, 150);
+        Assert.Equal(600, left);
+    }
 }

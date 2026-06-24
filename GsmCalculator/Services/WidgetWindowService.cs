@@ -126,10 +126,16 @@ public class WidgetWindowService : IWidgetWindowService
             widgetService, debouncer);
         var window = new WidgetWindow { DataContext = vm };
 
+        // Регистрируем окно как «сателлит» магнитной системы (v1.2 — блок J).
+        // Отписка — при Closed (см. ниже).
+        var magnetism = _sp.GetRequiredService<IWindowMagnetismService>();
+        magnetism.RegisterSatellite(window);
+
         // При закрытии — убираем из реестра и освобождаем VM
         // (она отпишется от LanguageChanged, иначе утечка).
         window.Closed += (_, _) =>
         {
+            magnetism.UnregisterSatellite(window);
             _open.Remove(widget.Id);
             vm.Dispose();
         };

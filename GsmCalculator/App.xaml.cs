@@ -61,6 +61,10 @@ public partial class App : Application
         // 6. Показываем главное окно.
         mainWindow.Show();
 
+        // Регистрируем главное окно как «хост» для магнитного прилипания виджетов.
+        // ДО Show подписаться можно, но Left/Top могут быть NaN, безопаснее после.
+        Services.GetRequiredService<IWindowMagnetismService>().RegisterHost(mainWindow);
+
         // 7. Восстанавливаем сессию ПОСЛЕ показа окна — чтобы виджеты
         //    корректно позиционировались, а биндинги истории обновились.
         if (session != null)
@@ -238,6 +242,7 @@ public partial class App : Application
         services.AddSingleton<IClipboardService, ClipboardService>();
         services.AddSingleton<IDebouncerFactory, DispatcherDebouncerFactory>();
         services.AddSingleton<IFavoritesService, FavoritesService>();
+        services.AddSingleton<IWindowMagnetismService, WindowMagnetismService>();
 
         // Файловые сервисы — Singleton с явным путём.
         // Лямбда (sp => ...) позволяет передать аргументы в конструктор.

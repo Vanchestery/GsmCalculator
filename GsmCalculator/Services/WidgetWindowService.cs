@@ -118,8 +118,12 @@ public class WidgetWindowService : IWidgetWindowService
         var mainVm = _sp.GetRequiredService<MainViewModel>();
         var loc = _sp.GetRequiredService<ILocalizationService>();
         var clipboard = _sp.GetRequiredService<IClipboardService>();
+        var widgetService = _sp.GetRequiredService<IWidgetService>();
+        var debouncer = _sp.GetRequiredService<IDebouncerFactory>()
+            .Create(TimeSpan.FromMilliseconds(500));
 
-        var vm = new WidgetViewModel(widget, conversion, calc, mainVm, loc, clipboard);
+        var vm = new WidgetViewModel(widget, conversion, calc, mainVm, loc, clipboard,
+            widgetService, debouncer);
         var window = new WidgetWindow { DataContext = vm };
 
         // При закрытии — убираем из реестра и освобождаем VM

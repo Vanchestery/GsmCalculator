@@ -24,6 +24,15 @@ public class WidgetViewModel : ViewModelBase, IDisposable
     private readonly MainViewModel _mainVm;
     private readonly ILocalizationService _loc;
     private readonly IClipboardService _clipboard;
+    private readonly IWidgetService _widgetService;
+    private readonly IDebouncer _saveDebouncer;
+
+    /// <summary>
+    /// Подавление авто-сохранения. True во время инициализации полей
+    /// в конструкторе и при <see cref="ApplyState"/> (восстановление сессии),
+    /// чтобы не писать на диск то что только что с него прочитали.
+    /// </summary>
+    private bool _suspendAutoSave = true;
 
     /// <summary>Параметры последней конвертации — чтобы повторить её при смене языка.</summary>
     private sealed record LastConversion(double Input, double Density, int DecimalPlaces, bool IsLtoKg);
@@ -45,7 +54,10 @@ public class WidgetViewModel : ViewModelBase, IDisposable
         private set
         {
             if (SetProperty(ref _density, value))
+            {
                 OnPropertyChanged(nameof(DensityText));
+                ScheduleSave();
+            }
         }
     }
 
@@ -73,7 +85,11 @@ public class WidgetViewModel : ViewModelBase, IDisposable
     public int DecimalPlaces
     {
         get => _decimalPlaces;
-        set => SetProperty(ref _decimalPlaces, Math.Clamp(value, 0, 3));
+        set
+        {
+            if (SetProperty(ref _decimalPlaces, Math.Clamp(value, 0, 3)))
+                ScheduleSave();
+        }
     }
 
     // --- Результат последней конвертации ---
@@ -99,7 +115,9 @@ public class WidgetViewModel : ViewModelBase, IDisposable
         ICalculatorService calc,
         MainViewModel mainVm,
         ILocalizationService localization,
-        IClipboardService clipboard)
+        IClipboardService clipboard,
+        IWidgetService widgetService,
+        IDebouncer saveDebouncer)
     {
         _widget = widget ?? throw new ArgumentNullException(nameof(widget));
         _conversion = conversion ?? throw new ArgumentNullException(nameof(conversion));
@@ -107,7 +125,10 @@ public class WidgetViewModel : ViewModelBase, IDisposable
         _mainVm = mainVm ?? throw new ArgumentNullException(nameof(mainVm));
         _loc = localization ?? throw new ArgumentNullException(nameof(localization));
         _clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
+        _widgetService = widgetService ?? throw new ArgumentNullException(nameof(widgetService));
+        _saveDebouncer = saveDebouncer ?? throw new ArgumentNullException(nameof(saveDebouncer));
 
+        // _suspendAutoSave=true (поле-инициализатор) пока инициализируемся.
         _density = widget.DefaultDensity;
         _decimalPlaces = Math.Clamp(widget.DefaultDecimalPlaces, 0, 3);
 
@@ -118,6 +139,53 @@ public class WidgetViewModel : ViewModelBase, IDisposable
 
         // Перевод результата вживую при смене языка интерфейса.
         _loc.LanguageChanged += OnLanguageChanged;
+
+        // Готовы реагировать на пользовательский ввод.
+        _suspendAutoSave = false;
+    }
+
+    /// <summary>
+    /// Планирует отложенное сохранение текущих Density/DecimalPlaces в виджет.
+    /// Вызывается из сеттеров. Подавляется во время инициализации/ApplyState
+    /// через <see cref="_suspendAutoSave"/>.
+    /// </summary>
+    private void ScheduleSave()
+    {
+        if (_suspendAutoSave) return;
+        _saveDebouncer.Debounce(SaveCurrentState);
+    }
+
+    /// <summary>
+    /// Сохраняет текущее состояние плотности/округления в <see cref="IWidgetService"/>.
+    /// Re-fetch виджет по Id — на случай если за время дебаунса его отредактировали
+    /// через Add Widget (E из v1.1). Так мы не затрём свежее Name/DensityMode.
+    /// Если виджет был удалён — ничего не делаем (не воскрешаем).
+    /// </summary>
+    private void SaveCurrentState()
+    {
+        var current = _widgetService.Find(_widget.Id);
+        if (current == null) return;
+
+        var updated = new Widget
+        {
+            Id = current.Id,
+            Name = current.Name,
+            DensityMode = current.DensityMode,
+            DefaultDensity = _density,
+            DefaultDecimalPlaces = _decimalPlaces,
+            IsBuiltIn = current.IsBuiltIn
+        };
+
+        try
+        {
+            _widgetService.Update(updated);
+        }
+        catch
+        {
+            // Сбой авто-сохранения не должен сломать виджет — следующая попытка может сработать.
+            // (Например: пустое имя через рассинхрон с другой VM. WidgetService.Update бросает
+            //  ArgumentException — но имя мы берём из current, так что не должно быть.)
+        }
     }
 
     /// <summary>Запоминает параметры конвертации и выполняет её.</summary>
@@ -198,20 +266,33 @@ public class WidgetViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Применяет сохранённое состояние при восстановлении сессии —
     /// плотность и округление, которые пользователь выставил до закрытия.
+    /// Авто-сохранение временно подавлено: эти значения только что прочитаны
+    /// с диска, писать их обратно нет смысла.
     /// </summary>
     public void ApplyState(double density, int decimalPlaces)
     {
-        Density = density;
-        DecimalPlaces = Math.Clamp(decimalPlaces, 0, 3);
+        var previousSuspend = _suspendAutoSave;
+        _suspendAutoSave = true;
+        try
+        {
+            Density = density;
+            DecimalPlaces = Math.Clamp(decimalPlaces, 0, 3);
+        }
+        finally
+        {
+            _suspendAutoSave = previousSuspend;
+        }
     }
 
     /// <summary>
-    /// Отписка от LanguageChanged. Вызывается при закрытии окна-виджета
-    /// (см. WidgetWindowService). Без этого синглтон LocalizationService
-    /// держал бы ссылку на VM и она бы не собиралась GC.
+    /// Отписка от LanguageChanged + flush отложенного авто-сохранения.
+    /// Вызывается при закрытии окна-виджета (см. WidgetWindowService).
+    /// Без flush последнее изменение слайдера/плотности могло потеряться
+    /// (если юзер закрыл окно до истечения debounce-задержки).
     /// </summary>
     public void Dispose()
     {
         _loc.LanguageChanged -= OnLanguageChanged;
+        _saveDebouncer.Flush();
     }
 }

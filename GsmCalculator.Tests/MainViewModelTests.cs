@@ -34,13 +34,31 @@ public class MainViewModelTests
         var loc = new Mock<ILocalizationService>();
         loc.Setup(l => l.Get("Common_Error")).Returns("Ошибка");
 
+        var widgetService = new Mock<IWidgetService>();
+        widgetService.Setup(s => s.GetAll()).Returns(new List<Widget>());
+
+        var favorites = new Mock<IFavoritesService>();
+        favorites.Setup(f => f.GetFavoriteIds()).Returns(new List<Guid>());
+
         return new MainViewModel(
             new CalculatorService(),                  // настоящий — чистая логика
             settings.Object,
             Mock.Of<IAddWidgetWindowService>(),
             Mock.Of<ISettingsWindowService>(),
             loc.Object,
-            Mock.Of<IClipboardService>());
+            Mock.Of<IClipboardService>(),
+            widgetService.Object,
+            favorites.Object,
+            Mock.Of<IWidgetWindowService>());
+    }
+
+    /// <summary>Мок IFavoritesService с пустым списком — для тестов где
+    /// поведение избранного не важно, но конструктор VM требует валидной зависимости.</summary>
+    private static IFavoritesService EmptyFavorites()
+    {
+        var m = new Mock<IFavoritesService>();
+        m.Setup(f => f.GetFavoriteIds()).Returns(new List<Guid>());
+        return m.Object;
     }
 
     /// <summary>Вводит несколько цифр последовательно.</summary>
@@ -560,7 +578,8 @@ public class MainViewModelTests
         var vm = new MainViewModel(
             new CalculatorService(), settings.Object,
             Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object,
-            Mock.Of<IClipboardService>());
+            Mock.Of<IClipboardService>(),
+            Mock.Of<IWidgetService>(), EmptyFavorites(), Mock.Of<IWidgetWindowService>());
 
         Assert.Equal("HIDE", vm.HistoryToggleLabel);
         vm.ToggleHistoryCommand.Execute(null);
@@ -582,7 +601,8 @@ public class MainViewModelTests
         var vm = new MainViewModel(
             new CalculatorService(), settings.Object,
             Mock.Of<IAddWidgetWindowService>(), settingsWindow.Object, loc.Object,
-            Mock.Of<IClipboardService>());
+            Mock.Of<IClipboardService>(),
+            Mock.Of<IWidgetService>(), EmptyFavorites(), Mock.Of<IWidgetWindowService>());
 
         vm.OpenSettingsCommand.Execute(null);
 
@@ -600,7 +620,8 @@ public class MainViewModelTests
         var vm = new MainViewModel(
             new CalculatorService(), settings.Object,
             addWidget.Object, Mock.Of<ISettingsWindowService>(), loc.Object,
-            Mock.Of<IClipboardService>());
+            Mock.Of<IClipboardService>(),
+            Mock.Of<IWidgetService>(), EmptyFavorites(), Mock.Of<IWidgetWindowService>());
 
         vm.OpenAddWidgetCommand.Execute(null);
 
@@ -654,7 +675,8 @@ public class MainViewModelTests
         var vm = new MainViewModel(
             new CalculatorService(), settings.Object,
             Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object,
-            Mock.Of<IClipboardService>());
+            Mock.Of<IClipboardService>(),
+            Mock.Of<IWidgetService>(), EmptyFavorites(), Mock.Of<IWidgetWindowService>());
 
         vm.CycleRoundingModeCommand.Execute(null);
 
@@ -812,7 +834,8 @@ public class MainViewModelTests
         var vm = new MainViewModel(
             new CalculatorService(), settings.Object,
             Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(),
-            loc.Object, clipboard.Object);
+            loc.Object, clipboard.Object,
+            Mock.Of<IWidgetService>(), EmptyFavorites(), Mock.Of<IWidgetWindowService>());
 
         return (vm, clipboard);
     }
@@ -880,5 +903,138 @@ public class MainViewModelTests
         vm.CopyDisplayCommand.Execute(null);
 
         clipboard.Verify(c => c.SetText(It.IsAny<string>()), Times.Never);
+    }
+
+    // ----------------------------------------------------------------
+    // Блок I — Закреплённые виджеты + панель
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public void IsFavoritesVisible_DefaultsToFalse()
+    {
+        var vm = CreateSut();
+        Assert.False(vm.IsFavoritesVisible);
+    }
+
+    [Fact]
+    public void ToggleFavoritesCommand_FlipsIsFavoritesVisible()
+    {
+        var vm = CreateSut();
+        vm.ToggleFavoritesCommand.Execute(null);
+        Assert.True(vm.IsFavoritesVisible);
+        vm.ToggleFavoritesCommand.Execute(null);
+        Assert.False(vm.IsFavoritesVisible);
+    }
+
+    [Fact]
+    public void Favorites_BuildsFromFavoritesService()
+    {
+        var w1 = new Widget { Id = Guid.NewGuid(), Name = "А" };
+        var w2 = new Widget { Id = Guid.NewGuid(), Name = "Б" };
+
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(AppSettings.CreateDefault());
+
+        var widgetService = new Mock<IWidgetService>();
+        widgetService.Setup(s => s.Find(w1.Id)).Returns(w1);
+        widgetService.Setup(s => s.Find(w2.Id)).Returns(w2);
+
+        var favorites = new Mock<IFavoritesService>();
+        favorites.Setup(f => f.GetFavoriteIds()).Returns(new[] { w1.Id, w2.Id });
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(),
+            Mock.Of<ILocalizationService>(), Mock.Of<IClipboardService>(),
+            widgetService.Object, favorites.Object, Mock.Of<IWidgetWindowService>());
+
+        Assert.Equal(2, vm.Favorites.Count);
+        Assert.Equal(w1, vm.Favorites[0]);
+        Assert.Equal(w2, vm.Favorites[1]);
+    }
+
+    [Fact]
+    public void Favorites_SkipsMissingWidgets()
+    {
+        // Id из settings есть, но WidgetService его не находит (удалён) — пропускаем.
+        var existing = new Widget { Id = Guid.NewGuid(), Name = "Существует" };
+        var ghostId = Guid.NewGuid();
+
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(AppSettings.CreateDefault());
+
+        var widgetService = new Mock<IWidgetService>();
+        widgetService.Setup(s => s.Find(existing.Id)).Returns(existing);
+        widgetService.Setup(s => s.Find(ghostId)).Returns((Widget?)null);
+
+        var favorites = new Mock<IFavoritesService>();
+        favorites.Setup(f => f.GetFavoriteIds()).Returns(new[] { existing.Id, ghostId });
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(),
+            Mock.Of<ILocalizationService>(), Mock.Of<IClipboardService>(),
+            widgetService.Object, favorites.Object, Mock.Of<IWidgetWindowService>());
+
+        Assert.Single(vm.Favorites);
+        Assert.Equal(existing, vm.Favorites[0]);
+    }
+
+    [Fact]
+    public void OpenFavoriteCommand_CallsWidgetWindowsOpenOrFocus()
+    {
+        var w = new Widget { Id = Guid.NewGuid(), Name = "АИ-92" };
+
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(AppSettings.CreateDefault());
+
+        var widgetWindows = new Mock<IWidgetWindowService>();
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(),
+            Mock.Of<ILocalizationService>(), Mock.Of<IClipboardService>(),
+            Mock.Of<IWidgetService>(), EmptyFavorites(), widgetWindows.Object);
+
+        vm.OpenFavoriteCommand.Execute(w);
+
+        widgetWindows.Verify(s => s.OpenOrFocus(w), Times.Once);
+    }
+
+    [Fact]
+    public void Favorites_RefreshesOnFavoritesChangedEvent()
+    {
+        var w = new Widget { Id = Guid.NewGuid(), Name = "Новый" };
+        var ids = new List<Guid>();
+
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(AppSettings.CreateDefault());
+
+        var widgetService = new Mock<IWidgetService>();
+        widgetService.Setup(s => s.Find(w.Id)).Returns(w);
+
+        var favorites = new Mock<IFavoritesService>();
+        favorites.Setup(f => f.GetFavoriteIds()).Returns(() => ids);
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(),
+            Mock.Of<ILocalizationService>(), Mock.Of<IClipboardService>(),
+            widgetService.Object, favorites.Object, Mock.Of<IWidgetWindowService>());
+
+        Assert.Empty(vm.Favorites);
+
+        // Имитация: подписали виджет → событие → VM перечитал.
+        ids.Add(w.Id);
+        favorites.Raise(f => f.FavoritesChanged += null, EventArgs.Empty);
+
+        Assert.Single(vm.Favorites);
+    }
+
+    [Fact]
+    public void IsFavoritesEmpty_ReflectsFavoritesCount()
+    {
+        var vm = CreateSut();
+        Assert.True(vm.IsFavoritesEmpty);
     }
 }

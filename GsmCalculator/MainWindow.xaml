@@ -55,6 +55,9 @@
     </Window.InputBindings>
 
     <Window.Resources>
+        <!-- Bool → Visibility (true=Visible, false=Collapsed). Встроенный конвертер WPF. -->
+        <BooleanToVisibilityConverter x:Key="BoolToVisConverter"/>
+
         <!-- Универсальный стиль для всех кнопок калькулятора.
              Focusable=False — чтобы клик мышью не «крал» фокус клавиатуры,
              иначе Enter/Space на сфокусированной кнопке кликали бы её снова
@@ -132,6 +135,11 @@
                     FontFamily="Segoe MDL2 Assets" FontSize="16" Padding="10,8"
                     ToolTip="{Binding HistoryToggleLabel}"
                     Command="{Binding ToggleHistoryCommand}"/>
+            <!-- Segoe MDL2 E735 = иконка Favorite Star. Тоггл панели «Избранное». -->
+            <Button Content="&#xE735;" Style="{StaticResource TopBarButtonStyle}"
+                    FontFamily="Segoe MDL2 Assets" FontSize="16" Padding="10,8"
+                    ToolTip="{Binding FavoritesToggleLabel}"
+                    Command="{Binding ToggleFavoritesCommand}"/>
             <!-- Циклическая кнопка округления. Подпись на кнопке — короткий индикатор
                  текущего режима («∞», «1», «0.1»). FontFamily не Segoe MDL2 —
                  здесь обычные символы/цифры. Клик переключает: None→Integer→OneTenth→None. -->
@@ -200,15 +208,55 @@
             </Grid>
         </Border>
 
-        <!-- ОСНОВНАЯ ОБЛАСТЬ: КАЛЬКУЛЯТОР + ИСТОРИЯ -->
+        <!-- ОСНОВНАЯ ОБЛАСТЬ: ИЗБРАННОЕ + КАЛЬКУЛЯТОР + ИСТОРИЯ (3 колонки) -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition x:Name="FavoritesColumn" Width="0" MinWidth="0"/>
                 <ColumnDefinition Width="2*" MinWidth="320"/>
                 <ColumnDefinition x:Name="HistoryColumn" Width="*" MinWidth="180"/>
             </Grid.ColumnDefinitions>
 
+            <!-- ===== Панель «Избранное» — закреплённые виджеты ===== -->
+            <Border x:Name="FavoritesBorder"
+                    Grid.Column="0" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
+                    Margin="3,3,10,3" CornerRadius="4"
+                    Visibility="Collapsed">
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBackground}" Padding="10,6">
+                        <TextBlock Text="{DynamicResource Main_Favorites}" FontWeight="Bold" FontSize="13"
+                                   Foreground="{DynamicResource TextForeground}"/>
+                    </Border>
+
+                    <!-- Пустое состояние: подсказка как закрепить. -->
+                    <TextBlock DockPanel.Dock="Bottom"
+                               Text="{DynamicResource Main_FavoritesEmpty}"
+                               Foreground="{DynamicResource SecondaryForeground}"
+                               TextWrapping="Wrap" FontSize="11" Padding="8,6"
+                               Visibility="{Binding IsFavoritesEmpty, Converter={StaticResource BoolToVisConverter}}"/>
+
+                    <!-- Список закреплённых виджетов. Каждый — кнопка-плитка,
+                         клик открывает окно виджета через OpenFavoriteCommand. -->
+                    <ItemsControl ItemsSource="{Binding Favorites}" Background="{DynamicResource WindowBackground}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding Name}"
+                                        HorizontalContentAlignment="Left"
+                                        Padding="10,6" Margin="4,4,4,0"
+                                        Background="{DynamicResource TopBarButtonBackground}"
+                                        Foreground="{DynamicResource TopBarButtonForeground}"
+                                        BorderThickness="0"
+                                        Cursor="Hand" Focusable="False"
+                                        helpers:ButtonProps.CornerRadius="3"
+                                        Command="{Binding DataContext.OpenFavoriteCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </DockPanel>
+            </Border>
+
             <!-- ===== Кнопки калькулятора 5x4 ===== -->
-            <UniformGrid Grid.Column="0" Rows="5" Columns="4">
+            <UniformGrid Grid.Column="1" Rows="5" Columns="4">
                 <!-- ряд 1 -->
                 <Button Content="CE" Style="{StaticResource UtilButtonStyle}" Command="{Binding ClearEntryCommand}"/>
                 <Button Content="C"  Style="{StaticResource UtilButtonStyle}" Command="{Binding ClearCommand}"/>
@@ -244,7 +292,7 @@
 
             <!-- ===== Панель истории ===== -->
             <Border x:Name="HistoryBorder"
-                    Grid.Column="1" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
+                    Grid.Column="2" BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
                     Margin="10,3,3,3" CornerRadius="4">
                 <DockPanel>
                     <Border DockPanel.Dock="Top" Background="{DynamicResource PanelBackground}" Padding="10,6">

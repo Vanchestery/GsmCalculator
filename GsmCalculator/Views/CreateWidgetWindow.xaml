@@ -79,6 +79,12 @@
                     VerticalAlignment="Center" Margin="0,0,8,0"/>
         </DockPanel>
 
+        <!-- Чекбокс «В избранное» — закреплять виджет на панели главного окна. -->
+        <CheckBox Content="{DynamicResource CreateWidget_IsFavorite}"
+                  IsChecked="{Binding IsFavorite}"
+                  Foreground="{DynamicResource TextForeground}"
+                  Margin="0,12,0,0"/>
+
         <!-- Сообщение валидации -->
         <TextBlock Text="{Binding ValidationMessage}"
                    Foreground="#FFEF5350"

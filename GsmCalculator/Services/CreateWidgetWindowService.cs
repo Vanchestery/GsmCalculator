@@ -22,6 +22,7 @@ public class CreateWidgetWindowService : ICreateWidgetWindowService
         var vm = new CreateWidgetViewModel(
             _sp.GetRequiredService<IWidgetService>(),
             _sp.GetRequiredService<ILocalizationService>(),
+            _sp.GetRequiredService<IFavoritesService>(),
             toEdit);
 
         var window = new CreateWidgetWindow

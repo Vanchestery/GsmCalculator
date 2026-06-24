@@ -31,4 +31,10 @@ public class MainWindowState
     /// а не в AppSettings.
     /// </summary>
     public bool IsHistoryVisible { get; set; } = true;
+
+    /// <summary>
+    /// True если панель «Избранное» была видна при закрытии (v1.2).
+    /// По умолчанию false — пустая панель не мозолит глаза новому юзеру.
+    /// </summary>
+    public bool IsFavoritesVisible { get; set; } = false;
 }

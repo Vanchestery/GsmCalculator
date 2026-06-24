@@ -36,6 +36,15 @@ public class AppSettings
     public RoundingMode RoundingMode { get; set; } = RoundingMode.None;
 
     /// <summary>
+    /// Id виджетов закреплённых в панели «Избранное» (v1.2). Порядок в списке =
+    /// порядок отображения в панели. Управляется через IFavoritesService.
+    ///
+    /// Использован List, а не HashSet, потому что порядок важен (юзер ожидает
+    /// что только что закреплённый виджет добавится к концу списка).
+    /// </summary>
+    public List<Guid> FavoriteWidgetIds { get; set; } = new();
+
+    /// <summary>
     /// Возвращает копию настроек по умолчанию.
     /// Используется при первом запуске или сбросе настроек.
     /// </summary>

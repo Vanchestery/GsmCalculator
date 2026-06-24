@@ -77,10 +77,14 @@ public class WidgetViewModelTests
 
         var debouncer = new TestDebouncer();
 
+        var favoritesMock = new Mock<IFavoritesService>();
+        favoritesMock.Setup(f => f.GetFavoriteIds()).Returns(new List<Guid>());
+
         var mainVm = new MainViewModel(
             new CalculatorService(), settings.Object,
             Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(),
-            loc.Object, Mock.Of<IClipboardService>());
+            loc.Object, Mock.Of<IClipboardService>(),
+            widgetService.Object, favoritesMock.Object, Mock.Of<IWidgetWindowService>());
 
         var vm = new WidgetViewModel(
             widget,

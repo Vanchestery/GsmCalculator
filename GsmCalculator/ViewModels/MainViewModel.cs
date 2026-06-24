@@ -24,6 +24,9 @@ public class MainViewModel : ViewModelBase
     private readonly ISettingsWindowService _settingsWindow;
     private readonly ILocalizationService _loc;
     private readonly IClipboardService _clipboard;
+    private readonly IWidgetService _widgetService;
+    private readonly IFavoritesService _favorites;
+    private readonly IWidgetWindowService _widgetWindows;
 
     private CalculatorMode _mode;
     private RoundingMode _roundingMode;
@@ -112,6 +115,31 @@ public class MainViewModel : ViewModelBase
     public string HistoryToggleLabel
         => _loc.Get(_isHistoryVisible ? "Main_HideHistory" : "Main_ShowHistory");
 
+    private bool _isFavoritesVisible;
+    /// <summary>Видна ли панель «Избранное». Состояние сохраняется в window-state.json.</summary>
+    public bool IsFavoritesVisible
+    {
+        get => _isFavoritesVisible;
+        set
+        {
+            if (SetProperty(ref _isFavoritesVisible, value))
+                OnPropertyChanged(nameof(FavoritesToggleLabel));
+        }
+    }
+
+    /// <summary>Локализованная подпись кнопки переключения избранного.</summary>
+    public string FavoritesToggleLabel
+        => _loc.Get(_isFavoritesVisible ? "Main_HideFavorites" : "Main_ShowFavorites");
+
+    /// <summary>
+    /// Закреплённые виджеты — пересобирается при изменении состава избранного
+    /// или при изменении/удалении виджетов через WidgetsChanged.
+    /// </summary>
+    public ObservableCollection<Widget> Favorites { get; } = new();
+
+    /// <summary>True если в избранном ничего нет — для биндинга подсказки в панели.</summary>
+    public bool IsFavoritesEmpty => Favorites.Count == 0;
+
     // --- Команды ---
     public ICommand DigitCommand { get; }
     public ICommand DecimalCommand { get; }
@@ -124,8 +152,10 @@ public class MainViewModel : ViewModelBase
     public ICommand OpenSettingsCommand { get; }
     public ICommand OpenAddWidgetCommand { get; }
     public ICommand ToggleHistoryCommand { get; }
+    public ICommand ToggleFavoritesCommand { get; }
     public ICommand CycleRoundingModeCommand { get; }
     public ICommand CopyDisplayCommand { get; }
+    public ICommand OpenFavoriteCommand { get; }
 
     public MainViewModel(
         ICalculatorService calc,
@@ -133,7 +163,10 @@ public class MainViewModel : ViewModelBase
         IAddWidgetWindowService addWidgetWindow,
         ISettingsWindowService settingsWindow,
         ILocalizationService localization,
-        IClipboardService clipboard)
+        IClipboardService clipboard,
+        IWidgetService widgetService,
+        IFavoritesService favorites,
+        IWidgetWindowService widgetWindows)
     {
         _calc = calc;
         _settings = settings;
@@ -141,6 +174,9 @@ public class MainViewModel : ViewModelBase
         _settingsWindow = settingsWindow;
         _loc = localization;
         _clipboard = clipboard;
+        _widgetService = widgetService;
+        _favorites = favorites;
+        _widgetWindows = widgetWindows;
 
         var loaded = settings.Load();
         HistorySize = loaded.HistorySize;
@@ -159,16 +195,49 @@ public class MainViewModel : ViewModelBase
         OpenSettingsCommand = new RelayCommand(_ => _settingsWindow.OpenDialog());
         OpenAddWidgetCommand = new RelayCommand(_ => _addWidgetWindow.OpenDialog());
         ToggleHistoryCommand = new RelayCommand(_ => IsHistoryVisible = !IsHistoryVisible);
+        ToggleFavoritesCommand = new RelayCommand(_ => IsFavoritesVisible = !IsFavoritesVisible);
         CycleRoundingModeCommand = new RelayCommand(_ => CycleRoundingMode());
         CopyDisplayCommand = new RelayCommand(_ => CopyDisplay(), _ => !_isError);
+        OpenFavoriteCommand = new RelayCommand<Widget>(OpenFavorite);
+
+        // Подписки на изменения избранного и виджетов — рефреш панели.
+        // Singleton VM → отписка не нужна (живёт до конца процесса).
+        _favorites.FavoritesChanged += (_, _) => RefreshFavorites();
+        _widgetService.WidgetsChanged += (_, _) => RefreshFavorites();
+        RefreshFavorites();
 
         // MainViewModel — singleton, поэтому отписка не нужна (живёт до конца процесса).
         // При смене языка перерисовываем подписи привязанных строк.
         _loc.LanguageChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(HistoryToggleLabel));
+            OnPropertyChanged(nameof(FavoritesToggleLabel));
             OnPropertyChanged(nameof(RoundingTooltip));
         };
+    }
+
+    /// <summary>
+    /// Перерисовывает <see cref="Favorites"/> по текущему составу избранного
+    /// и актуальным виджетам в WidgetService. Id, для которых виджет не найден
+    /// (удалён, но Id остался в settings) — пропускаются: панель показывает
+    /// только реально доступные виджеты.
+    /// </summary>
+    private void RefreshFavorites()
+    {
+        Favorites.Clear();
+        foreach (var id in _favorites.GetFavoriteIds())
+        {
+            var w = _widgetService.Find(id);
+            if (w != null) Favorites.Add(w);
+        }
+        OnPropertyChanged(nameof(IsFavoritesEmpty));
+    }
+
+    /// <summary>Клик по элементу панели избранного — открывает виджет.</summary>
+    private void OpenFavorite(Widget? widget)
+    {
+        if (widget == null) return;
+        _widgetWindows.OpenOrFocus(widget);
     }
 
     // =================================================================

@@ -129,7 +129,8 @@ public class SettingsViewModel : ViewModelBase
             StartupBehavior = StartupBehavior,
             Language = Language,
             CalculatorMode = CalculatorMode,
-            RoundingMode = current.RoundingMode
+            RoundingMode = current.RoundingMode,
+            FavoriteWidgetIds = current.FavoriteWidgetIds
         };
 
         // Сохраняем в settings.json.

@@ -74,10 +74,13 @@ public partial class App : Application
     /// </summary>
     private static void ApplyWindowState(Window window, MainWindowState? state)
     {
-        // IsHistoryVisible применяется к VM в любом случае — она сама
-        // через PropertyChanged триггерит physical layout в code-behind.
+        // IsHistoryVisible / IsFavoritesVisible применяются к VM в любом случае —
+        // она через PropertyChanged триггерит physical layout в code-behind.
         if (window.DataContext is MainViewModel vm)
+        {
             vm.IsHistoryVisible = state?.IsHistoryVisible ?? true;
+            vm.IsFavoritesVisible = state?.IsFavoritesVisible ?? false;
+        }
 
         if (state != null && ScreenHelper.IsOnScreen(state.Left, state.Top))
         {
@@ -209,7 +212,8 @@ public partial class App : Application
                 Width = bounds.Width,
                 Height = bounds.Height,
                 IsMaximized = window.WindowState == System.Windows.WindowState.Maximized,
-                IsHistoryVisible = mainVm.IsHistoryVisible
+                IsHistoryVisible = mainVm.IsHistoryVisible,
+                IsFavoritesVisible = mainVm.IsFavoritesVisible
             });
         }
         catch
@@ -233,6 +237,7 @@ public partial class App : Application
         services.AddSingleton<IThemeService, ThemeService>();
         services.AddSingleton<IClipboardService, ClipboardService>();
         services.AddSingleton<IDebouncerFactory, DispatcherDebouncerFactory>();
+        services.AddSingleton<IFavoritesService, FavoritesService>();
 
         // Файловые сервисы — Singleton с явным путём.
         // Лямбда (sp => ...) позволяет передать аргументы в конструктор.

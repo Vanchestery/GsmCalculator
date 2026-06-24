@@ -15,15 +15,22 @@ public class WidgetListItem
 
     public Widget Widget { get; }
 
-    public WidgetListItem(Widget widget, ILocalizationService loc)
+    public WidgetListItem(Widget widget, ILocalizationService loc, bool isFavorite = false)
     {
         Widget = widget;
         _loc = loc;
+        IsFavorite = isFavorite;
     }
 
     public string Name => Widget.Name;
 
     public bool IsBuiltIn => Widget.IsBuiltIn;
+
+    /// <summary>True если виджет закреплён в панели «Избранное» (v1.2).</summary>
+    public bool IsFavorite { get; }
+
+    /// <summary>«★» если закреплён, пустая строка иначе — для индикатора в списке.</summary>
+    public string FavoriteIndicator => IsFavorite ? "★" : string.Empty;
 
     /// <summary>Метка вида: «встроенный» / «свой».</summary>
     public string KindLabel

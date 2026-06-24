@@ -23,6 +23,7 @@ public class MainViewModel : ViewModelBase
     private readonly IAddWidgetWindowService _addWidgetWindow;
     private readonly ISettingsWindowService _settingsWindow;
     private readonly ILocalizationService _loc;
+    private readonly IClipboardService _clipboard;
 
     private CalculatorMode _mode;
     private RoundingMode _roundingMode;
@@ -124,19 +125,22 @@ public class MainViewModel : ViewModelBase
     public ICommand OpenAddWidgetCommand { get; }
     public ICommand ToggleHistoryCommand { get; }
     public ICommand CycleRoundingModeCommand { get; }
+    public ICommand CopyDisplayCommand { get; }
 
     public MainViewModel(
         ICalculatorService calc,
         ISettingsService settings,
         IAddWidgetWindowService addWidgetWindow,
         ISettingsWindowService settingsWindow,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        IClipboardService clipboard)
     {
         _calc = calc;
         _settings = settings;
         _addWidgetWindow = addWidgetWindow;
         _settingsWindow = settingsWindow;
         _loc = localization;
+        _clipboard = clipboard;
 
         var loaded = settings.Load();
         HistorySize = loaded.HistorySize;
@@ -156,6 +160,7 @@ public class MainViewModel : ViewModelBase
         OpenAddWidgetCommand = new RelayCommand(_ => _addWidgetWindow.OpenDialog());
         ToggleHistoryCommand = new RelayCommand(_ => IsHistoryVisible = !IsHistoryVisible);
         CycleRoundingModeCommand = new RelayCommand(_ => CycleRoundingMode());
+        CopyDisplayCommand = new RelayCommand(_ => CopyDisplay(), _ => !_isError);
 
         // MainViewModel — singleton, поэтому отписка не нужна (живёт до конца процесса).
         // При смене языка перерисовываем подписи привязанных строк.
@@ -586,6 +591,19 @@ public class MainViewModel : ViewModelBase
         }
 
         Display = _display[..^1];
+    }
+
+    /// <summary>
+    /// Копирует текущий дисплей в буфер обмена.
+    /// Дисплей уже содержит округлённое значение (по K — округление
+    /// происходит в момент = и SetDisplayValue), поэтому в буфер летит
+    /// именно то что юзер видит. В состоянии ошибки команда отключена
+    /// через CanExecute (см. _isError в инициализации команды).
+    /// </summary>
+    private void CopyDisplay()
+    {
+        if (_isError) return;
+        _clipboard.SetText(_display);
     }
 
     /// <summary>

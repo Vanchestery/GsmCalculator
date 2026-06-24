@@ -50,6 +50,8 @@
         <KeyBinding Key="Delete" Command="{Binding ClearEntryCommand}"/>
         <!-- Shift+5 = '%' на большинстве раскладок -->
         <KeyBinding Key="D5" Modifiers="Shift" Command="{Binding PercentCommand}"/>
+        <!-- Копирование дисплея в буфер. Ctrl+C ловится окном и идёт в команду VM. -->
+        <KeyBinding Key="C" Modifiers="Control" Command="{Binding CopyDisplayCommand}"/>
     </Window.InputBindings>
 
     <Window.Resources>
@@ -158,13 +160,43 @@
                            TextTrimming="CharacterEllipsis"
                            Margin="0,0,0,4"/>
 
-                <!-- Основное число, крупное -->
-                <TextBlock Grid.Row="1"
-                           Text="{Binding Display}"
-                           Foreground="{DynamicResource DisplayForeground}"
-                           FontFamily="Consolas" FontSize="40"
-                           HorizontalAlignment="Right" VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis"/>
+                <!-- Дисплей + маленькая кнопка-иконка копирования справа.
+                     2 колонки: дисплей растягивается, кнопка фиксирована справа. -->
+                <Grid Grid.Row="1">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Основное число, крупное. Контекстное меню — правый клик → Копировать. -->
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Display}"
+                               Foreground="{DynamicResource DisplayForeground}"
+                               FontFamily="Consolas" FontSize="40"
+                               HorizontalAlignment="Right" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis">
+                        <TextBlock.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="{DynamicResource Common_Copy}"
+                                          Command="{Binding PlacementTarget.DataContext.CopyDisplayCommand,
+                                                            RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          InputGestureText="Ctrl+C"/>
+                            </ContextMenu>
+                        </TextBlock.ContextMenu>
+                    </TextBlock>
+
+                    <!-- Segoe MDL2 Assets E8C8 = иконка Copy. Маленькая, ненавязчивая. -->
+                    <Button Grid.Column="1"
+                            Content="&#xE8C8;"
+                            FontFamily="Segoe MDL2 Assets" FontSize="14"
+                            Background="Transparent" BorderThickness="0"
+                            Foreground="{DynamicResource DisplayPreviewForeground}"
+                            Cursor="Hand" Focusable="False"
+                            Padding="6" Margin="8,0,0,0"
+                            VerticalAlignment="Center"
+                            ToolTip="{DynamicResource Common_Copy}"
+                            Command="{Binding CopyDisplayCommand}"/>
+                </Grid>
             </Grid>
         </Border>
 

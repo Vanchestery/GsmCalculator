@@ -13,6 +13,7 @@
     <sys:String x:Key="Common_ErrorFormat">Error: {0}</sys:String>
     <sys:String x:Key="Common_Yes">Yes</sys:String>
     <sys:String x:Key="Common_No">No</sys:String>
+    <sys:String x:Key="Common_Copy">Copy</sys:String>
 
     <!-- Startup dialog (continue session) -->
     <sys:String x:Key="Session_ContinueTitle">Continue session?</sys:String>

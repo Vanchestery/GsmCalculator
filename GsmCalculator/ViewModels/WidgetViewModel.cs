@@ -23,6 +23,7 @@ public class WidgetViewModel : ViewModelBase, IDisposable
     private readonly ICalculatorService _calc;
     private readonly MainViewModel _mainVm;
     private readonly ILocalizationService _loc;
+    private readonly IClipboardService _clipboard;
 
     /// <summary>Параметры последней конвертации — чтобы повторить её при смене языка.</summary>
     private sealed record LastConversion(double Input, double Density, int DecimalPlaces, bool IsLtoKg);
@@ -90,19 +91,22 @@ public class WidgetViewModel : ViewModelBase, IDisposable
     public ICommand LitersToKgCommand { get; }
     public ICommand KgToLitersCommand { get; }
     public ICommand InsertToCalculatorCommand { get; }
+    public ICommand CopyResultCommand { get; }
 
     public WidgetViewModel(
         Widget widget,
         IConversionService conversion,
         ICalculatorService calc,
         MainViewModel mainVm,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        IClipboardService clipboard)
     {
         _widget = widget ?? throw new ArgumentNullException(nameof(widget));
         _conversion = conversion ?? throw new ArgumentNullException(nameof(conversion));
         _calc = calc ?? throw new ArgumentNullException(nameof(calc));
         _mainVm = mainVm ?? throw new ArgumentNullException(nameof(mainVm));
         _loc = localization ?? throw new ArgumentNullException(nameof(localization));
+        _clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
 
         _density = widget.DefaultDensity;
         _decimalPlaces = Math.Clamp(widget.DefaultDecimalPlaces, 0, 3);
@@ -110,6 +114,7 @@ public class WidgetViewModel : ViewModelBase, IDisposable
         LitersToKgCommand = new RelayCommand(_ => Convert(isLtoKg: true));
         KgToLitersCommand = new RelayCommand(_ => Convert(isLtoKg: false));
         InsertToCalculatorCommand = new RelayCommand(_ => InsertToCalculator(), _ => HasResult);
+        CopyResultCommand = new RelayCommand(_ => CopyResult(), _ => HasResult);
 
         // Перевод результата вживую при смене языка интерфейса.
         _loc.LanguageChanged += OnLanguageChanged;
@@ -176,6 +181,18 @@ public class WidgetViewModel : ViewModelBase, IDisposable
     {
         if (_lastResultValue.HasValue)
             _mainVm.SetDisplayValue(_lastResultValue.Value);
+    }
+
+    /// <summary>
+    /// Копирует в буфер обмена ТОЛЬКО число последнего результата
+    /// (без единиц, как ответил пользователь в ТЗ 2.2). Уже округлённое
+    /// значение из _lastResultValue, отформатированное через FormatNumber
+    /// (тот же формат что и на дисплее калькулятора).
+    /// </summary>
+    private void CopyResult()
+    {
+        if (!_lastResultValue.HasValue) return;
+        _clipboard.SetText(_calc.FormatNumber(_lastResultValue.Value));
     }
 
     /// <summary>

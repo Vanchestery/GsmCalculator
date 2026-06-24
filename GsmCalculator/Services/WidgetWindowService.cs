@@ -117,8 +117,9 @@ public class WidgetWindowService : IWidgetWindowService
         var calc = _sp.GetRequiredService<ICalculatorService>();
         var mainVm = _sp.GetRequiredService<MainViewModel>();
         var loc = _sp.GetRequiredService<ILocalizationService>();
+        var clipboard = _sp.GetRequiredService<IClipboardService>();
 
-        var vm = new WidgetViewModel(widget, conversion, calc, mainVm, loc);
+        var vm = new WidgetViewModel(widget, conversion, calc, mainVm, loc, clipboard);
         var window = new WidgetWindow { DataContext = vm };
 
         // При закрытии — убираем из реестра и освобождаем VM

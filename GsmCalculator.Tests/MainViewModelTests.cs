@@ -39,7 +39,8 @@ public class MainViewModelTests
             settings.Object,
             Mock.Of<IAddWidgetWindowService>(),
             Mock.Of<ISettingsWindowService>(),
-            loc.Object);
+            loc.Object,
+            Mock.Of<IClipboardService>());
     }
 
     /// <summary>Вводит несколько цифр последовательно.</summary>
@@ -558,7 +559,8 @@ public class MainViewModelTests
 
         var vm = new MainViewModel(
             new CalculatorService(), settings.Object,
-            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object);
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object,
+            Mock.Of<IClipboardService>());
 
         Assert.Equal("HIDE", vm.HistoryToggleLabel);
         vm.ToggleHistoryCommand.Execute(null);
@@ -579,7 +581,8 @@ public class MainViewModelTests
 
         var vm = new MainViewModel(
             new CalculatorService(), settings.Object,
-            Mock.Of<IAddWidgetWindowService>(), settingsWindow.Object, loc.Object);
+            Mock.Of<IAddWidgetWindowService>(), settingsWindow.Object, loc.Object,
+            Mock.Of<IClipboardService>());
 
         vm.OpenSettingsCommand.Execute(null);
 
@@ -596,7 +599,8 @@ public class MainViewModelTests
 
         var vm = new MainViewModel(
             new CalculatorService(), settings.Object,
-            addWidget.Object, Mock.Of<ISettingsWindowService>(), loc.Object);
+            addWidget.Object, Mock.Of<ISettingsWindowService>(), loc.Object,
+            Mock.Of<IClipboardService>());
 
         vm.OpenAddWidgetCommand.Execute(null);
 
@@ -649,7 +653,8 @@ public class MainViewModelTests
         var loc = new Mock<ILocalizationService>();
         var vm = new MainViewModel(
             new CalculatorService(), settings.Object,
-            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object);
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object,
+            Mock.Of<IClipboardService>());
 
         vm.CycleRoundingModeCommand.Execute(null);
 
@@ -788,5 +793,92 @@ public class MainViewModelTests
         Assert.Equal("1", vm.RoundingIndicator);
         vm.CycleRoundingModeCommand.Execute(null);
         Assert.Equal("0.1", vm.RoundingIndicator);
+    }
+
+    // ----------------------------------------------------------------
+    // Блок G — Копирование в буфер
+    // ----------------------------------------------------------------
+
+    /// <summary>Фабрика VM с моком буфера для verify.</summary>
+    private static (MainViewModel vm, Mock<IClipboardService> clipboard) CreateSutWithClipboardMock(
+        RoundingMode rounding = RoundingMode.None)
+    {
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(new AppSettings { RoundingMode = rounding });
+        var loc = new Mock<ILocalizationService>();
+        loc.Setup(l => l.Get("Common_Error")).Returns("Ошибка");
+        var clipboard = new Mock<IClipboardService>();
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(),
+            loc.Object, clipboard.Object);
+
+        return (vm, clipboard);
+    }
+
+    [Fact]
+    public void CopyDisplay_NoCalculations_CopiesZero()
+    {
+        var (vm, clipboard) = CreateSutWithClipboardMock();
+        vm.CopyDisplayCommand.Execute(null);
+        clipboard.Verify(c => c.SetText("0"), Times.Once);
+    }
+
+    [Fact]
+    public void CopyDisplay_AfterDigits_CopiesDisplayString()
+    {
+        var (vm, clipboard) = CreateSutWithClipboardMock();
+        Enter(vm, "1250");
+        vm.CopyDisplayCommand.Execute(null);
+        clipboard.Verify(c => c.SetText("1250"), Times.Once);
+    }
+
+    [Fact]
+    public void CopyDisplay_AfterEquals_CopiesResult()
+    {
+        var (vm, clipboard) = CreateSutWithClipboardMock();
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.EqualsCommand.Execute(null);
+
+        vm.CopyDisplayCommand.Execute(null);
+
+        clipboard.Verify(c => c.SetText("150"), Times.Once);
+    }
+
+    [Fact]
+    public void CopyDisplay_RespectsRounding_CopiesRoundedValue()
+    {
+        // По G + K: в буфер идёт то что юзер видит — округлённое.
+        var (vm, clipboard) = CreateSutWithClipboardMock(rounding: RoundingMode.Integer);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "7");
+        vm.EqualsCommand.Execute(null);
+        // Display = "151" (округлённое из 150.7)
+
+        vm.CopyDisplayCommand.Execute(null);
+        clipboard.Verify(c => c.SetText("151"), Times.Once);
+    }
+
+    [Fact]
+    public void CopyDisplay_InErrorState_DoesNotCopy()
+    {
+        var (vm, clipboard) = CreateSutWithClipboardMock();
+        Enter(vm, "5");
+        vm.OperationCommand.Execute("÷");
+        Enter(vm, "0");
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("Ошибка", vm.Display);
+
+        // CanExecute должен быть false → команда не дёргает clipboard.
+        Assert.False(vm.CopyDisplayCommand.CanExecute(null));
+        vm.CopyDisplayCommand.Execute(null);
+
+        clipboard.Verify(c => c.SetText(It.IsAny<string>()), Times.Never);
     }
 }

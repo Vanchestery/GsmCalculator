@@ -231,6 +231,7 @@ public partial class App : Application
         services.AddSingleton<IConversionService, ConversionService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IThemeService, ThemeService>();
+        services.AddSingleton<IClipboardService, ClipboardService>();
 
         // Файловые сервисы — Singleton с явным путём.
         // Лямбда (sp => ...) позволяет передать аргументы в конструктор.

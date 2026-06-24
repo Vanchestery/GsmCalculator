@@ -38,7 +38,7 @@ jobs:
           Compress-Archive -Path publish/win-x64/* -DestinationPath "GsmCalculator-$version-win-x64.zip"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: GsmCalculator-*.zip
           generate_release_notes: true

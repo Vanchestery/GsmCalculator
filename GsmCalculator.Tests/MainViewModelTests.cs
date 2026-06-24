@@ -20,24 +20,45 @@ public class MainViewModelTests
     /// <summary>Фабрика VM с реальным калькулятором и Moq-зависимостями.</summary>
     private static MainViewModel CreateSut(
         int historySize = 10,
-        CalculatorMode mode = CalculatorMode.Classic)
+        CalculatorMode mode = CalculatorMode.Classic,
+        RoundingMode rounding = RoundingMode.None)
     {
         var settings = new Mock<ISettingsService>();
         settings.Setup(s => s.Load()).Returns(new AppSettings
         {
             HistorySize = historySize,
-            CalculatorMode = mode
+            CalculatorMode = mode,
+            RoundingMode = rounding
         });
 
         var loc = new Mock<ILocalizationService>();
         loc.Setup(l => l.Get("Common_Error")).Returns("Ошибка");
+
+        var widgetService = new Mock<IWidgetService>();
+        widgetService.Setup(s => s.GetAll()).Returns(new List<Widget>());
+
+        var favorites = new Mock<IFavoritesService>();
+        favorites.Setup(f => f.GetFavoriteIds()).Returns(new List<Guid>());
 
         return new MainViewModel(
             new CalculatorService(),                  // настоящий — чистая логика
             settings.Object,
             Mock.Of<IAddWidgetWindowService>(),
             Mock.Of<ISettingsWindowService>(),
-            loc.Object);
+            loc.Object,
+            Mock.Of<IClipboardService>(),
+            widgetService.Object,
+            favorites.Object,
+            Mock.Of<IWidgetWindowService>());
+    }
+
+    /// <summary>Мок IFavoritesService с пустым списком — для тестов где
+    /// поведение избранного не важно, но конструктор VM требует валидной зависимости.</summary>
+    private static IFavoritesService EmptyFavorites()
+    {
+        var m = new Mock<IFavoritesService>();
+        m.Setup(f => f.GetFavoriteIds()).Returns(new List<Guid>());
+        return m.Object;
     }
 
     /// <summary>Вводит несколько цифр последовательно.</summary>
@@ -261,25 +282,177 @@ public class MainViewModelTests
         Assert.Equal("12", vm.Display);
     }
 
+    // Блок F (v1.2): Negate команда удалена — кнопка '±' заменена на '%'.
+    // Тесты на унарный минус больше не актуальны.
+
+    // ----------------------------------------------------------------
+    // Блок F — Контекстная команда процентов (Windows Calc Standard style)
+    // ----------------------------------------------------------------
+
     [Fact]
-    public void Negate_TogglesSign()
+    public void Percent_Classic_Plus_AddsPercentOfLeftOperand()
     {
-        var vm = CreateSut();
-        Enter(vm, "5");
-
-        vm.NegateCommand.Execute(null);
-        Assert.Equal("-5", vm.Display);
-
-        vm.NegateCommand.Execute(null);
-        Assert.Equal("5", vm.Display);
+        // 100 + 10% = 100 + (100 × 0.1) = 110
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("10", vm.Display); // 10% от 100 = 10
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("110", vm.Display);
     }
 
     [Fact]
-    public void Negate_OnZero_DoesNothing()
+    public void Percent_Classic_Minus_SubtractsPercentOfLeftOperand()
+    {
+        // 100 − 10% = 100 − (100 × 0.1) = 90
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("-");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("10", vm.Display);
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("90", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_Classic_Multiply_DividesBy100()
+    {
+        // 100 × 10% = 100 × 0.1 = 10
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("×");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("0.1", vm.Display);
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("10", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_Classic_Divide_DividesBy100()
+    {
+        // 100 ÷ 10% = 100 ÷ 0.1 = 1000
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("÷");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("0.1", vm.Display);
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("1000", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_Classic_NoOperator_DividesBy100()
+    {
+        // 10% без оператора = 10 / 100 = 0.1
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("0.1", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_OnZero_GivesZero()
     {
         var vm = CreateSut();
-        vm.NegateCommand.Execute(null);
+        vm.PercentCommand.Execute(null);
         Assert.Equal("0", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_Classic_ChainAfterPercent_AutoEvaluates()
+    {
+        // 100 + 10% + 5 = 115 (matches Windows Calc Standard)
+        // Если % не закрывает чейн — было бы 10+5=15. Это контролирует _justResolvedPercent.
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "5");
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("115", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_DigitAfter_ReplacesDisplay()
+    {
+        // После % следующая цифра должна ЗАМЕНИТЬ дисплей, не дописать.
+        var vm = CreateSut();
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null); // display="10"
+        Enter(vm, "7"); // должен заменить
+        Assert.Equal("7", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_Engineering_AlwaysDividesBy100()
+    {
+        // В Engineering '%' = просто value/100 (как Windows Calc Scientific).
+        // 2 + 3 × 4% = 2 + 3 × 0.04 = 2.12
+        var vm = CreateSut(mode: CalculatorMode.Engineering);
+        Enter(vm, "2");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "3");
+        vm.OperationCommand.Execute("×");
+        Enter(vm, "4");
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("0.04", vm.Display);
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("2.12", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_Engineering_ChainAfterPercent_PreservesPercentValue()
+    {
+        // 2 × 4% + 100 = (2 × 0.04) + 100 = 0.08 + 100 = 100.08
+        // Регрессионный тест: % не должен теряться при последующем операторе.
+        var vm = CreateSut(mode: CalculatorMode.Engineering);
+        Enter(vm, "2");
+        vm.OperationCommand.Execute("×");
+        Enter(vm, "4");
+        vm.PercentCommand.Execute(null);
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "100");
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("100.08", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_InErrorState_DoesNothing()
+    {
+        var vm = CreateSut();
+        Enter(vm, "5");
+        vm.OperationCommand.Execute("÷");
+        Enter(vm, "0");
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("Ошибка", vm.Display);
+
+        vm.PercentCommand.Execute(null);
+        Assert.Equal("Ошибка", vm.Display);
+    }
+
+    [Fact]
+    public void Percent_HistoryRecorded_OnEquals()
+    {
+        // История пишется внутри Apply на = — должна показать «100 + 10 = 110».
+        var vm = CreateSut(mode: CalculatorMode.Classic);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "10");
+        vm.PercentCommand.Execute(null);
+        vm.EqualsCommand.Execute(null);
+
+        Assert.Single(vm.History);
+        Assert.Equal("100 + 10", vm.History[0].Expression);
+        Assert.Equal("110", vm.History[0].Result);
     }
 
     // ----------------------------------------------------------------
@@ -404,7 +577,9 @@ public class MainViewModelTests
 
         var vm = new MainViewModel(
             new CalculatorService(), settings.Object,
-            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object);
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object,
+            Mock.Of<IClipboardService>(),
+            Mock.Of<IWidgetService>(), EmptyFavorites(), Mock.Of<IWidgetWindowService>());
 
         Assert.Equal("HIDE", vm.HistoryToggleLabel);
         vm.ToggleHistoryCommand.Execute(null);
@@ -425,7 +600,9 @@ public class MainViewModelTests
 
         var vm = new MainViewModel(
             new CalculatorService(), settings.Object,
-            Mock.Of<IAddWidgetWindowService>(), settingsWindow.Object, loc.Object);
+            Mock.Of<IAddWidgetWindowService>(), settingsWindow.Object, loc.Object,
+            Mock.Of<IClipboardService>(),
+            Mock.Of<IWidgetService>(), EmptyFavorites(), Mock.Of<IWidgetWindowService>());
 
         vm.OpenSettingsCommand.Execute(null);
 
@@ -442,10 +619,422 @@ public class MainViewModelTests
 
         var vm = new MainViewModel(
             new CalculatorService(), settings.Object,
-            addWidget.Object, Mock.Of<ISettingsWindowService>(), loc.Object);
+            addWidget.Object, Mock.Of<ISettingsWindowService>(), loc.Object,
+            Mock.Of<IClipboardService>(),
+            Mock.Of<IWidgetService>(), EmptyFavorites(), Mock.Of<IWidgetWindowService>());
 
         vm.OpenAddWidgetCommand.Execute(null);
 
         addWidget.Verify(a => a.OpenDialog(), Times.Once);
+    }
+
+    // ----------------------------------------------------------------
+    // Блок K — Режим округления
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public void RoundingMode_DefaultsToNone_FromSettings()
+    {
+        var vm = CreateSut(); // rounding=None по умолчанию
+        Assert.Equal(RoundingMode.None, vm.RoundingMode);
+    }
+
+    [Fact]
+    public void RoundingMode_InitializedFromSettings()
+    {
+        var vm = CreateSut(rounding: RoundingMode.Integer);
+        Assert.Equal(RoundingMode.Integer, vm.RoundingMode);
+    }
+
+    [Fact]
+    public void CycleRoundingModeCommand_CyclesNoneIntegerOneTenthBack()
+    {
+        var vm = CreateSut(rounding: RoundingMode.None);
+
+        vm.CycleRoundingModeCommand.Execute(null);
+        Assert.Equal(RoundingMode.Integer, vm.RoundingMode);
+
+        vm.CycleRoundingModeCommand.Execute(null);
+        Assert.Equal(RoundingMode.OneTenth, vm.RoundingMode);
+
+        vm.CycleRoundingModeCommand.Execute(null);
+        Assert.Equal(RoundingMode.None, vm.RoundingMode);
+    }
+
+    [Fact]
+    public void CycleRoundingMode_PersistsToSettings()
+    {
+        // Готовим мок настроек явно — нужен Verify на Save.
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(new AppSettings { RoundingMode = RoundingMode.None });
+        AppSettings? saved = null;
+        settings.Setup(s => s.Save(It.IsAny<AppSettings>()))
+                .Callback<AppSettings>(s => saved = s);
+
+        var loc = new Mock<ILocalizationService>();
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object,
+            Mock.Of<IClipboardService>(),
+            Mock.Of<IWidgetService>(), EmptyFavorites(), Mock.Of<IWidgetWindowService>());
+
+        vm.CycleRoundingModeCommand.Execute(null);
+
+        Assert.NotNull(saved);
+        Assert.Equal(RoundingMode.Integer, saved!.RoundingMode);
+    }
+
+    // -- K.5 = Y: округление на каждом фиксировании результата (Classic) --
+
+    [Fact]
+    public void Classic_EqualsRoundsResult_Integer()
+    {
+        var vm = CreateSut(rounding: RoundingMode.Integer);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "7");
+        vm.EqualsCommand.Execute(null);
+
+        Assert.Equal("151", vm.Display);
+    }
+
+    [Fact]
+    public void Classic_EqualsRoundsResult_OneTenth()
+    {
+        var vm = CreateSut(rounding: RoundingMode.OneTenth);
+        // 100 + 50.77 = 150.77 → 150.8 при OneTenth.
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "77");
+        vm.EqualsCommand.Execute(null);
+
+        Assert.Equal("150.8", vm.Display);
+    }
+
+    [Fact]
+    public void Classic_ChainAfterEquals_UsesRoundedAccumulator()
+    {
+        // K.5=Y: после = аккумулятор становится округлённым числом.
+        // Следующая операция строится от него.
+        var vm = CreateSut(rounding: RoundingMode.Integer);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "7");
+        vm.EqualsCommand.Execute(null);
+        // Сейчас display="151", accumulator=151.
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "0");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "4");
+        vm.EqualsCommand.Execute(null);
+        // 151 + 0.4 = 151.4 → 151 при Integer.
+        Assert.Equal("151", vm.Display);
+    }
+
+    [Fact]
+    public void Classic_OperatorMidExpression_RoundsIntermediate()
+    {
+        // Нажатие нового оператора фиксирует предыдущий результат — он тоже округляется.
+        var vm = CreateSut(rounding: RoundingMode.Integer);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "7");
+        vm.OperationCommand.Execute("+"); // фиксирует 100+50.7=150.7→151
+        Enter(vm, "10");
+        vm.EqualsCommand.Execute(null);
+        // 151 + 10 = 161
+        Assert.Equal("161", vm.Display);
+    }
+
+    // -- K.5 = Y: округление на = в Engineering --
+
+    [Fact]
+    public void Engineering_EqualsRoundsResult()
+    {
+        var vm = CreateSut(mode: CalculatorMode.Engineering, rounding: RoundingMode.Integer);
+        // 2 + 3 × 4.7 = 16.1 → 16 при Integer.
+        Enter(vm, "2");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "3");
+        vm.OperationCommand.Execute("×");
+        Enter(vm, "4");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "7");
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("16", vm.Display);
+    }
+
+    // -- Округление в режиме None — точные значения --
+
+    [Fact]
+    public void Classic_NoneMode_PreservesPrecision()
+    {
+        var vm = CreateSut(rounding: RoundingMode.None);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "7");
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("150.7", vm.Display);
+    }
+
+    // -- SetDisplayValue (виджет) применяет округление --
+
+    [Fact]
+    public void SetDisplayValue_AppliesRounding_Integer()
+    {
+        var vm = CreateSut(rounding: RoundingMode.Integer);
+        // Виджет отдал «точное» 73.7 — должно прилететь на дисплей как 74.
+        vm.SetDisplayValue(73.7);
+        Assert.Equal("74", vm.Display);
+    }
+
+    [Fact]
+    public void SetDisplayValue_NoneMode_PreservesValue()
+    {
+        var vm = CreateSut(rounding: RoundingMode.None);
+        vm.SetDisplayValue(73.7);
+        Assert.Equal("73.7", vm.Display);
+    }
+
+    [Fact]
+    public void RoundingIndicator_ReflectsCurrentMode()
+    {
+        var vm = CreateSut(rounding: RoundingMode.None);
+        Assert.Equal("∞", vm.RoundingIndicator);
+        vm.CycleRoundingModeCommand.Execute(null);
+        Assert.Equal("1", vm.RoundingIndicator);
+        vm.CycleRoundingModeCommand.Execute(null);
+        Assert.Equal("0.1", vm.RoundingIndicator);
+    }
+
+    // ----------------------------------------------------------------
+    // Блок G — Копирование в буфер
+    // ----------------------------------------------------------------
+
+    /// <summary>Фабрика VM с моком буфера для verify.</summary>
+    private static (MainViewModel vm, Mock<IClipboardService> clipboard) CreateSutWithClipboardMock(
+        RoundingMode rounding = RoundingMode.None)
+    {
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(new AppSettings { RoundingMode = rounding });
+        var loc = new Mock<ILocalizationService>();
+        loc.Setup(l => l.Get("Common_Error")).Returns("Ошибка");
+        var clipboard = new Mock<IClipboardService>();
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(),
+            loc.Object, clipboard.Object,
+            Mock.Of<IWidgetService>(), EmptyFavorites(), Mock.Of<IWidgetWindowService>());
+
+        return (vm, clipboard);
+    }
+
+    [Fact]
+    public void CopyDisplay_NoCalculations_CopiesZero()
+    {
+        var (vm, clipboard) = CreateSutWithClipboardMock();
+        vm.CopyDisplayCommand.Execute(null);
+        clipboard.Verify(c => c.SetText("0"), Times.Once);
+    }
+
+    [Fact]
+    public void CopyDisplay_AfterDigits_CopiesDisplayString()
+    {
+        var (vm, clipboard) = CreateSutWithClipboardMock();
+        Enter(vm, "1250");
+        vm.CopyDisplayCommand.Execute(null);
+        clipboard.Verify(c => c.SetText("1250"), Times.Once);
+    }
+
+    [Fact]
+    public void CopyDisplay_AfterEquals_CopiesResult()
+    {
+        var (vm, clipboard) = CreateSutWithClipboardMock();
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.EqualsCommand.Execute(null);
+
+        vm.CopyDisplayCommand.Execute(null);
+
+        clipboard.Verify(c => c.SetText("150"), Times.Once);
+    }
+
+    [Fact]
+    public void CopyDisplay_RespectsRounding_CopiesRoundedValue()
+    {
+        // По G + K: в буфер идёт то что юзер видит — округлённое.
+        var (vm, clipboard) = CreateSutWithClipboardMock(rounding: RoundingMode.Integer);
+        Enter(vm, "100");
+        vm.OperationCommand.Execute("+");
+        Enter(vm, "50");
+        vm.DecimalCommand.Execute(null);
+        Enter(vm, "7");
+        vm.EqualsCommand.Execute(null);
+        // Display = "151" (округлённое из 150.7)
+
+        vm.CopyDisplayCommand.Execute(null);
+        clipboard.Verify(c => c.SetText("151"), Times.Once);
+    }
+
+    [Fact]
+    public void CopyDisplay_InErrorState_DoesNotCopy()
+    {
+        var (vm, clipboard) = CreateSutWithClipboardMock();
+        Enter(vm, "5");
+        vm.OperationCommand.Execute("÷");
+        Enter(vm, "0");
+        vm.EqualsCommand.Execute(null);
+        Assert.Equal("Ошибка", vm.Display);
+
+        // CanExecute должен быть false → команда не дёргает clipboard.
+        Assert.False(vm.CopyDisplayCommand.CanExecute(null));
+        vm.CopyDisplayCommand.Execute(null);
+
+        clipboard.Verify(c => c.SetText(It.IsAny<string>()), Times.Never);
+    }
+
+    // ----------------------------------------------------------------
+    // Блок I — Закреплённые виджеты + панель
+    // ----------------------------------------------------------------
+
+    [Fact]
+    public void IsFavoritesVisible_DefaultsToFalse()
+    {
+        var vm = CreateSut();
+        Assert.False(vm.IsFavoritesVisible);
+    }
+
+    [Fact]
+    public void ToggleFavoritesCommand_FlipsIsFavoritesVisible()
+    {
+        var vm = CreateSut();
+        vm.ToggleFavoritesCommand.Execute(null);
+        Assert.True(vm.IsFavoritesVisible);
+        vm.ToggleFavoritesCommand.Execute(null);
+        Assert.False(vm.IsFavoritesVisible);
+    }
+
+    [Fact]
+    public void Favorites_BuildsFromFavoritesService()
+    {
+        var w1 = new Widget { Id = Guid.NewGuid(), Name = "А" };
+        var w2 = new Widget { Id = Guid.NewGuid(), Name = "Б" };
+
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(AppSettings.CreateDefault());
+
+        var widgetService = new Mock<IWidgetService>();
+        widgetService.Setup(s => s.Find(w1.Id)).Returns(w1);
+        widgetService.Setup(s => s.Find(w2.Id)).Returns(w2);
+
+        var favorites = new Mock<IFavoritesService>();
+        favorites.Setup(f => f.GetFavoriteIds()).Returns(new[] { w1.Id, w2.Id });
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(),
+            Mock.Of<ILocalizationService>(), Mock.Of<IClipboardService>(),
+            widgetService.Object, favorites.Object, Mock.Of<IWidgetWindowService>());
+
+        Assert.Equal(2, vm.Favorites.Count);
+        Assert.Equal(w1, vm.Favorites[0]);
+        Assert.Equal(w2, vm.Favorites[1]);
+    }
+
+    [Fact]
+    public void Favorites_SkipsMissingWidgets()
+    {
+        // Id из settings есть, но WidgetService его не находит (удалён) — пропускаем.
+        var existing = new Widget { Id = Guid.NewGuid(), Name = "Существует" };
+        var ghostId = Guid.NewGuid();
+
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(AppSettings.CreateDefault());
+
+        var widgetService = new Mock<IWidgetService>();
+        widgetService.Setup(s => s.Find(existing.Id)).Returns(existing);
+        widgetService.Setup(s => s.Find(ghostId)).Returns((Widget?)null);
+
+        var favorites = new Mock<IFavoritesService>();
+        favorites.Setup(f => f.GetFavoriteIds()).Returns(new[] { existing.Id, ghostId });
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(),
+            Mock.Of<ILocalizationService>(), Mock.Of<IClipboardService>(),
+            widgetService.Object, favorites.Object, Mock.Of<IWidgetWindowService>());
+
+        Assert.Single(vm.Favorites);
+        Assert.Equal(existing, vm.Favorites[0]);
+    }
+
+    [Fact]
+    public void OpenFavoriteCommand_CallsWidgetWindowsOpenOrFocus()
+    {
+        var w = new Widget { Id = Guid.NewGuid(), Name = "АИ-92" };
+
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(AppSettings.CreateDefault());
+
+        var widgetWindows = new Mock<IWidgetWindowService>();
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(),
+            Mock.Of<ILocalizationService>(), Mock.Of<IClipboardService>(),
+            Mock.Of<IWidgetService>(), EmptyFavorites(), widgetWindows.Object);
+
+        vm.OpenFavoriteCommand.Execute(w);
+
+        widgetWindows.Verify(s => s.OpenOrFocus(w), Times.Once);
+    }
+
+    [Fact]
+    public void Favorites_RefreshesOnFavoritesChangedEvent()
+    {
+        var w = new Widget { Id = Guid.NewGuid(), Name = "Новый" };
+        var ids = new List<Guid>();
+
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(AppSettings.CreateDefault());
+
+        var widgetService = new Mock<IWidgetService>();
+        widgetService.Setup(s => s.Find(w.Id)).Returns(w);
+
+        var favorites = new Mock<IFavoritesService>();
+        favorites.Setup(f => f.GetFavoriteIds()).Returns(() => ids);
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(),
+            Mock.Of<ILocalizationService>(), Mock.Of<IClipboardService>(),
+            widgetService.Object, favorites.Object, Mock.Of<IWidgetWindowService>());
+
+        Assert.Empty(vm.Favorites);
+
+        // Имитация: подписали виджет → событие → VM перечитал.
+        ids.Add(w.Id);
+        favorites.Raise(f => f.FavoritesChanged += null, EventArgs.Empty);
+
+        Assert.Single(vm.Favorites);
+    }
+
+    [Fact]
+    public void IsFavoritesEmpty_ReflectsFavoritesCount()
+    {
+        var vm = CreateSut();
+        Assert.True(vm.IsFavoritesEmpty);
     }
 }

@@ -117,14 +117,25 @@ public class WidgetWindowService : IWidgetWindowService
         var calc = _sp.GetRequiredService<ICalculatorService>();
         var mainVm = _sp.GetRequiredService<MainViewModel>();
         var loc = _sp.GetRequiredService<ILocalizationService>();
+        var clipboard = _sp.GetRequiredService<IClipboardService>();
+        var widgetService = _sp.GetRequiredService<IWidgetService>();
+        var debouncer = _sp.GetRequiredService<IDebouncerFactory>()
+            .Create(TimeSpan.FromMilliseconds(500));
 
-        var vm = new WidgetViewModel(widget, conversion, calc, mainVm, loc);
+        var vm = new WidgetViewModel(widget, conversion, calc, mainVm, loc, clipboard,
+            widgetService, debouncer);
         var window = new WidgetWindow { DataContext = vm };
+
+        // Регистрируем окно как «сателлит» магнитной системы (v1.2 — блок J).
+        // Отписка — при Closed (см. ниже).
+        var magnetism = _sp.GetRequiredService<IWindowMagnetismService>();
+        magnetism.RegisterSatellite(window);
 
         // При закрытии — убираем из реестра и освобождаем VM
         // (она отпишется от LanguageChanged, иначе утечка).
         window.Closed += (_, _) =>
         {
+            magnetism.UnregisterSatellite(window);
             _open.Remove(widget.Id);
             vm.Dispose();
         };

@@ -45,6 +45,32 @@ public class CalculatorServiceTests
     public void Divide_ByZero_Throws()
         => Assert.Throws<DivideByZeroException>(() => _sut.Divide(5, 0));
 
+    // ----------------------------------------------------------------
+    // ResolvePercent (Блок F v1.2): контекстный процент Windows Calc Standard
+    // ----------------------------------------------------------------
+
+    [Theory]
+    [InlineData(100, '+', 10, 10)]    // 10% от 100 = 10 (далее 100 + 10 = 110)
+    [InlineData(100, '-', 10, 10)]    // 10% от 100 = 10 (далее 100 − 10 = 90)
+    [InlineData(200, '+', 25, 50)]    // 25% от 200 = 50
+    [InlineData(50, '-', 20, 10)]     // 20% от 50 = 10
+    public void ResolvePercent_PlusMinus_ReturnsPercentOfLeft(double left, char op, double right, double expected)
+        => Assert.Equal(expected, _sut.ResolvePercent(left, op, right));
+
+    [Theory]
+    [InlineData(100, '×', 10, 0.1)]   // 10% = 0.1 (далее 100 × 0.1 = 10)
+    [InlineData(100, '*', 10, 0.1)]   // ASCII '*' = эквивалент '×'
+    [InlineData(100, '÷', 10, 0.1)]   // 10% = 0.1 (далее 100 ÷ 0.1 = 1000)
+    [InlineData(100, '/', 10, 0.1)]   // ASCII '/'
+    [InlineData(50, '×', 200, 2.0)]   // 200% = 2.0
+    public void ResolvePercent_MulDiv_ReturnsRightDividedBy100(double left, char op, double right, double expected)
+        => Assert.Equal(expected, _sut.ResolvePercent(left, op, right));
+
+    [Theory]
+    [InlineData('?', 10, 0.1)]        // незнакомая операция — fallback на /100
+    public void ResolvePercent_UnknownOp_ReturnsRightDividedBy100(char op, double right, double expected)
+        => Assert.Equal(expected, _sut.ResolvePercent(100, op, right));
+
     [Theory]
     [InlineData(5, '+', 3, 8)]
     [InlineData(5, '-', 3, 2)]

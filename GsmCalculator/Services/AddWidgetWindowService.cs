@@ -31,7 +31,8 @@ public class AddWidgetWindowService : IAddWidgetWindowService
             _sp.GetRequiredService<IWidgetService>(),
             _sp.GetRequiredService<IWidgetWindowService>(),
             _sp.GetRequiredService<ICreateWidgetWindowService>(),
-            _sp.GetRequiredService<ILocalizationService>());
+            _sp.GetRequiredService<ILocalizationService>(),
+            _sp.GetRequiredService<IFavoritesService>());
 
         _window = new AddWidgetWindow { DataContext = vm };
         _window.Closed += (_, _) =>

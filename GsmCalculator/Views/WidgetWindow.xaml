@@ -15,6 +15,11 @@
         Icon="/Resources/app.ico"
         Background="{DynamicResource WindowBackground}">
 
+    <Window.InputBindings>
+        <!-- Ctrl+C копирует число последнего результата в буфер обмена. -->
+        <KeyBinding Key="C" Modifiers="Control" Command="{Binding CopyResultCommand}"/>
+    </Window.InputBindings>
+
     <Window.Resources>
         <Style x:Key="ConvButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
             <Setter Property="Padding" Value="8,4"/>
@@ -94,14 +99,43 @@
                 Command="{Binding KgToLitersCommand}"
                 Margin="0,0,0,6"/>
 
-        <!-- Результат -->
+        <!-- Результат + миниатюрная иконка-кнопка копирования числа -->
         <Border Background="{DynamicResource WidgetResultBackground}"
                 BorderBrush="{DynamicResource PanelBorderBrush}" BorderThickness="1"
                 Padding="5" Margin="0,0,0,5" CornerRadius="3">
-            <TextBlock Text="{Binding LastResult}"
-                       TextWrapping="Wrap"
-                       MinHeight="22"
-                       FontFamily="Consolas" FontSize="11"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="{Binding LastResult}"
+                           TextWrapping="Wrap"
+                           MinHeight="22"
+                           FontFamily="Consolas" FontSize="11">
+                    <TextBlock.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="{DynamicResource Common_Copy}"
+                                      Command="{Binding PlacementTarget.DataContext.CopyResultCommand,
+                                                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                      InputGestureText="Ctrl+C"/>
+                        </ContextMenu>
+                    </TextBlock.ContextMenu>
+                </TextBlock>
+
+                <!-- Маленькая иконка-кнопка. Видна только когда есть результат. -->
+                <Button Grid.Column="1"
+                        Content="&#xE8C8;"
+                        FontFamily="Segoe MDL2 Assets" FontSize="11"
+                        Background="Transparent" BorderThickness="0"
+                        Foreground="{DynamicResource SecondaryForeground}"
+                        Cursor="Hand" Focusable="False"
+                        Padding="3" Margin="3,0,0,0"
+                        VerticalAlignment="Top"
+                        ToolTip="{DynamicResource Common_Copy}"
+                        Command="{Binding CopyResultCommand}"/>
+            </Grid>
         </Border>
 
         <!-- Вставить в калькулятор -->

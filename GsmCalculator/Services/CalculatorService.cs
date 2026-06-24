@@ -25,6 +25,22 @@ public class CalculatorService : ICalculatorService
         _ => throw new ArgumentException($"Неизвестная операция: {op}", nameof(op))
     };
 
+    public double ResolvePercent(double left, char op, double rightPercent) => op switch
+    {
+        // Для +/- процент берётся от левого операнда:
+        // 100 + 10% → 100 + (100 × 0.1) = 100 + 10 = 110.
+        '+' or '-' => left * (rightPercent / 100.0),
+
+        // Для ×/÷ процент = просто rightPercent/100:
+        // 100 × 10% → 100 × 0.1 = 10.
+        // 100 ÷ 10% → 100 ÷ 0.1 = 1000.
+        '×' or '*' or '÷' or '/' => rightPercent / 100.0,
+
+        // Незнакомый оператор — простое value/100. На практике сюда не попадаем,
+        // но без default switch не компилируется.
+        _ => rightPercent / 100.0
+    };
+
     public string FormatNumber(double value)
     {
         // NaN/Infinity — показываем явно.

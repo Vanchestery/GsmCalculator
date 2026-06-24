@@ -13,6 +13,7 @@
     <sys:String x:Key="Common_ErrorFormat">Error: {0}</sys:String>
     <sys:String x:Key="Common_Yes">Yes</sys:String>
     <sys:String x:Key="Common_No">No</sys:String>
+    <sys:String x:Key="Common_Copy">Copy</sys:String>
 
     <!-- Startup dialog (continue session) -->
     <sys:String x:Key="Session_ContinueTitle">Continue session?</sys:String>
@@ -25,6 +26,13 @@
     <sys:String x:Key="Main_History">History</sys:String>
     <sys:String x:Key="Main_HideHistory">Hide history</sys:String>
     <sys:String x:Key="Main_ShowHistory">Show history</sys:String>
+    <sys:String x:Key="Main_HideFavorites">Hide favorites</sys:String>
+    <sys:String x:Key="Main_ShowFavorites">Show favorites</sys:String>
+    <sys:String x:Key="Main_Favorites">Favorites</sys:String>
+    <sys:String x:Key="Main_FavoritesEmpty">Pin widgets via "Add widget → ★"</sys:String>
+    <sys:String x:Key="Main_Rounding_None">Rounding: off</sys:String>
+    <sys:String x:Key="Main_Rounding_Integer">Rounding: integer</sys:String>
+    <sys:String x:Key="Main_Rounding_OneTenth">Rounding: 0.1</sys:String>
 
     <!-- Widget -->
     <sys:String x:Key="Widget_Density">Density:</sys:String>
@@ -61,6 +69,8 @@
     <sys:String x:Key="AddWidget_Edit">Edit</sys:String>
     <sys:String x:Key="AddWidget_CreateNew">Create new…</sys:String>
     <sys:String x:Key="AddWidget_Delete">Delete</sys:String>
+    <sys:String x:Key="AddWidget_AddToFavorites">★ Pin to favorites</sys:String>
+    <sys:String x:Key="AddWidget_RemoveFromFavorites">★ Unpin from favorites</sys:String>
     <sys:String x:Key="AddWidget_DeleteTitle">Delete widget</sys:String>
     <sys:String x:Key="AddWidget_DeleteConfirm">Delete widget "{0}"?&#10;This action cannot be undone.</sys:String>
 
@@ -79,6 +89,7 @@
     <sys:String x:Key="CreateWidget_Variable">Variable</sys:String>
     <sys:String x:Key="CreateWidget_DefaultDensity">Default density</sys:String>
     <sys:String x:Key="CreateWidget_DecimalPlaces">Decimal places</sys:String>
+    <sys:String x:Key="CreateWidget_IsFavorite">★ Favorite</sys:String>
     <sys:String x:Key="CreateWidget_ValidationName">Enter a widget name.</sys:String>
     <sys:String x:Key="CreateWidget_ValidationDensityNumber">Density must be a number (use a dot as the separator).</sys:String>
     <sys:String x:Key="CreateWidget_ValidationDensityPositive">Density must be greater than zero.</sys:String>

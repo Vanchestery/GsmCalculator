@@ -20,6 +20,8 @@ public class WidgetService : IWidgetService
 
     public Widget? Find(Guid id) => _widgets.FirstOrDefault(w => w.Id == id);
 
+    public event EventHandler? WidgetsChanged;
+
     public void Add(Widget widget)
     {
         if (widget is null) throw new ArgumentNullException(nameof(widget));
@@ -28,6 +30,7 @@ public class WidgetService : IWidgetService
 
         _widgets.Add(widget);
         SaveAll();
+        WidgetsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void Update(Widget widget)
@@ -49,6 +52,7 @@ public class WidgetService : IWidgetService
         existing.DefaultDecimalPlaces = widget.DefaultDecimalPlaces;
 
         SaveAll();
+        WidgetsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void Remove(Guid widgetId)
@@ -61,6 +65,7 @@ public class WidgetService : IWidgetService
 
         _widgets.Remove(w);
         SaveAll();
+        WidgetsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     public void SaveAll()

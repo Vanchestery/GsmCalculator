@@ -14,6 +14,7 @@
     <sys:String x:Key="Common_ErrorFormat">Ошибка: {0}</sys:String>
     <sys:String x:Key="Common_Yes">Да</sys:String>
     <sys:String x:Key="Common_No">Нет</sys:String>
+    <sys:String x:Key="Common_Copy">Копировать</sys:String>
 
     <!-- Диалог запуска (продолжение сессии) -->
     <sys:String x:Key="Session_ContinueTitle">Продолжить сессию?</sys:String>
@@ -26,6 +27,13 @@
     <sys:String x:Key="Main_History">История</sys:String>
     <sys:String x:Key="Main_HideHistory">Скрыть историю</sys:String>
     <sys:String x:Key="Main_ShowHistory">Показать историю</sys:String>
+    <sys:String x:Key="Main_HideFavorites">Скрыть избранное</sys:String>
+    <sys:String x:Key="Main_ShowFavorites">Показать избранное</sys:String>
+    <sys:String x:Key="Main_Favorites">Избранное</sys:String>
+    <sys:String x:Key="Main_FavoritesEmpty">Закрепите виджеты через «Добавить виджет → ★»</sys:String>
+    <sys:String x:Key="Main_Rounding_None">Округление: выкл</sys:String>
+    <sys:String x:Key="Main_Rounding_Integer">Округление: до целых</sys:String>
+    <sys:String x:Key="Main_Rounding_OneTenth">Округление: до 0.1</sys:String>
 
     <!-- Виджет -->
     <sys:String x:Key="Widget_Density">Плотность:</sys:String>
@@ -62,6 +70,8 @@
     <sys:String x:Key="AddWidget_Edit">Изменить</sys:String>
     <sys:String x:Key="AddWidget_CreateNew">Создать новый…</sys:String>
     <sys:String x:Key="AddWidget_Delete">Удалить</sys:String>
+    <sys:String x:Key="AddWidget_AddToFavorites">★ В избранное</sys:String>
+    <sys:String x:Key="AddWidget_RemoveFromFavorites">★ Убрать из избранного</sys:String>
     <sys:String x:Key="AddWidget_DeleteTitle">Удаление виджета</sys:String>
     <sys:String x:Key="AddWidget_DeleteConfirm">Удалить виджет «{0}»?&#10;Это действие нельзя отменить.</sys:String>
 
@@ -80,6 +90,7 @@
     <sys:String x:Key="CreateWidget_Variable">Переменная</sys:String>
     <sys:String x:Key="CreateWidget_DefaultDensity">Плотность по умолчанию</sys:String>
     <sys:String x:Key="CreateWidget_DecimalPlaces">Знаков после запятой</sys:String>
+    <sys:String x:Key="CreateWidget_IsFavorite">★ В избранном</sys:String>
     <sys:String x:Key="CreateWidget_ValidationName">Введите название виджета.</sys:String>
     <sys:String x:Key="CreateWidget_ValidationDensityNumber">Плотность должна быть числом (разделитель — точка).</sys:String>
     <sys:String x:Key="CreateWidget_ValidationDensityPositive">Плотность должна быть больше нуля.</sys:String>

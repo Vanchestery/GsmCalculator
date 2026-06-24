@@ -23,18 +23,17 @@ public partial class MainWindow : Window
         DataContextChanged += OnDataContextChanged;
     }
 
-    /// <summary>
-    /// Минимальная ширина окна в режиме без истории. Топ-бар с тремя
-    /// иконками-кнопками теперь ~150px, главное ограничение — калькулятор-колонка
-    /// с её MinWidth=320 плюс outer Grid Margin (по 10 с каждой стороны).
-    /// </summary>
-    private const double MinWidthWithoutHistory = 360;
+    /// <summary>Базовая ширина окна — только калькулятор (без панелей).</summary>
+    private const double MinWidthBase = 360;
 
-    /// <summary>
-    /// Минимальная ширина окна в режиме с историей. Учитывает калькулятор-колонку
-    /// (320) + историю-колонку (180) + поля.
-    /// </summary>
-    private const double MinWidthWithHistory = 540;
+    /// <summary>Ширина колонки «Избранное» в развёрнутом состоянии.</summary>
+    private const double FavoritesColumnWidth = 150;
+
+    /// <summary>Минимальная ширина колонки истории в развёрнутом состоянии.</summary>
+    private const double HistoryColumnMinWidth = 180;
+
+    /// <summary>Отступ между колонками (Border.Margin).</summary>
+    private const double InterColumnSpacing = 10;
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
@@ -44,16 +43,30 @@ public partial class MainWindow : Window
         if (SizeToContent != SizeToContent.Manual)
             SizeToContent = SizeToContent.Manual;
 
-        // Если история скрыта, но сохранённая ширина явно великовата
-        // (наследие предыдущей версии, где compact-режим не умел сжиматься,
-        // и окно «зависало» 540+ с растянутыми кнопками) — пересчитать
-        // один раз по содержимому.
-        if (DataContext is MainViewModel vm && !vm.IsHistoryVisible
-            && Width > MinWidthWithoutHistory * 1.5)
+        // Если сохранённая ширина явно великовата для текущего состава панелей
+        // (наследие старой версии, или юзер закрыл с историей а открыл без неё) —
+        // пересчитать один раз по содержимому.
+        if (DataContext is MainViewModel vm)
         {
-            SizeToContent = SizeToContent.Width;
-            SizeToContent = SizeToContent.Manual;
+            var targetMin = ComputeMinWidth(vm.IsFavoritesVisible, vm.IsHistoryVisible);
+            if (Width > targetMin * 1.5)
+            {
+                SizeToContent = SizeToContent.Width;
+                SizeToContent = SizeToContent.Manual;
+            }
         }
+    }
+
+    /// <summary>
+    /// Считает MinWidth для текущего набора видимых панелей.
+    /// База — 360 (калькулятор). Каждая видимая панель добавляет свою ширину + спейсинг.
+    /// </summary>
+    private static double ComputeMinWidth(bool favsVisible, bool historyVisible)
+    {
+        var w = MinWidthBase;
+        if (favsVisible) w += FavoritesColumnWidth + InterColumnSpacing;
+        if (historyVisible) w += HistoryColumnMinWidth + InterColumnSpacing;
+        return w;
     }
 
     /// <summary>
@@ -71,39 +84,54 @@ public partial class MainWindow : Window
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(MainViewModel.IsHistoryVisible)) return;
+        // Реагируем на изменения видимости любой из двух панелей.
+        if (e.PropertyName is not (nameof(MainViewModel.IsHistoryVisible)
+            or nameof(MainViewModel.IsFavoritesVisible))) return;
         if (DataContext is not MainViewModel vm) return;
-        ApplyHistoryVisibility(vm.IsHistoryVisible);
+        ApplyPanelsVisibility(vm.IsFavoritesVisible, vm.IsHistoryVisible);
     }
 
     /// <summary>
-    /// Физически меняет layout: схлопывает колонку и Border истории,
+    /// Физически меняет layout: схлопывает/раскрывает колонки и Border'ы
+    /// панелей «Избранное» и «История», пересчитывает MinWidth окна,
     /// потом одноразово ставит SizeToContent=Width чтобы WPF сама перемерила
-    /// окно по содержимому. Сразу возвращаем Manual чтобы пользователь
-    /// мог дальше ресайзить мышкой.
+    /// окно по содержимому.
     ///
     /// Важно ВНАЧАЛЕ снизить MinWidth окна — иначе SizeToContent упрётся в него
     /// и не сможет сжать окно ниже него.
     /// </summary>
-    private void ApplyHistoryVisibility(bool visible)
+    private void ApplyPanelsVisibility(bool favsVisible, bool historyVisible)
     {
-        if (visible)
+        // Favorites column
+        if (favsVisible)
         {
-            HistoryColumn.MinWidth = 180;
+            FavoritesColumn.MinWidth = FavoritesColumnWidth;
+            FavoritesColumn.Width = new GridLength(FavoritesColumnWidth);
+            FavoritesBorder.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            FavoritesColumn.MinWidth = 0;
+            FavoritesColumn.Width = new GridLength(0);
+            FavoritesBorder.Visibility = Visibility.Collapsed;
+        }
+
+        // History column
+        if (historyVisible)
+        {
+            HistoryColumn.MinWidth = HistoryColumnMinWidth;
             HistoryColumn.Width = new GridLength(1, GridUnitType.Star);
             HistoryBorder.Visibility = Visibility.Visible;
-            MinWidth = MinWidthWithHistory;
         }
         else
         {
             HistoryColumn.MinWidth = 0;
             HistoryColumn.Width = new GridLength(0);
             HistoryBorder.Visibility = Visibility.Collapsed;
-            MinWidth = MinWidthWithoutHistory;
         }
 
-        // Перемеряем окно по содержимому — WPF сама вычислит новую ширину
-        // (с учётом обновлённого MinWidth), нам не нужно считать вручную.
+        MinWidth = ComputeMinWidth(favsVisible, historyVisible);
+
         if (IsLoaded)
         {
             SizeToContent = SizeToContent.Width;

@@ -61,6 +61,10 @@ public partial class App : Application
         // 6. Показываем главное окно.
         mainWindow.Show();
 
+        // Регистрируем главное окно как «хост» для магнитного прилипания виджетов.
+        // ДО Show подписаться можно, но Left/Top могут быть NaN, безопаснее после.
+        Services.GetRequiredService<IWindowMagnetismService>().RegisterHost(mainWindow);
+
         // 7. Восстанавливаем сессию ПОСЛЕ показа окна — чтобы виджеты
         //    корректно позиционировались, а биндинги истории обновились.
         if (session != null)
@@ -74,10 +78,13 @@ public partial class App : Application
     /// </summary>
     private static void ApplyWindowState(Window window, MainWindowState? state)
     {
-        // IsHistoryVisible применяется к VM в любом случае — она сама
-        // через PropertyChanged триггерит physical layout в code-behind.
+        // IsHistoryVisible / IsFavoritesVisible применяются к VM в любом случае —
+        // она через PropertyChanged триггерит physical layout в code-behind.
         if (window.DataContext is MainViewModel vm)
+        {
             vm.IsHistoryVisible = state?.IsHistoryVisible ?? true;
+            vm.IsFavoritesVisible = state?.IsFavoritesVisible ?? false;
+        }
 
         if (state != null && ScreenHelper.IsOnScreen(state.Left, state.Top))
         {
@@ -209,7 +216,8 @@ public partial class App : Application
                 Width = bounds.Width,
                 Height = bounds.Height,
                 IsMaximized = window.WindowState == System.Windows.WindowState.Maximized,
-                IsHistoryVisible = mainVm.IsHistoryVisible
+                IsHistoryVisible = mainVm.IsHistoryVisible,
+                IsFavoritesVisible = mainVm.IsFavoritesVisible
             });
         }
         catch
@@ -231,6 +239,10 @@ public partial class App : Application
         services.AddSingleton<IConversionService, ConversionService>();
         services.AddSingleton<ILocalizationService, LocalizationService>();
         services.AddSingleton<IThemeService, ThemeService>();
+        services.AddSingleton<IClipboardService, ClipboardService>();
+        services.AddSingleton<IDebouncerFactory, DispatcherDebouncerFactory>();
+        services.AddSingleton<IFavoritesService, FavoritesService>();
+        services.AddSingleton<IWindowMagnetismService, WindowMagnetismService>();
 
         // Файловые сервисы — Singleton с явным путём.
         // Лямбда (sp => ...) позволяет передать аргументы в конструктор.

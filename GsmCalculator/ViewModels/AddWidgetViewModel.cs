@@ -8,8 +8,8 @@ namespace GsmCalculator.ViewModels;
 /// <summary>
 /// ViewModel окна «Добавить виджет».
 /// Показывает список всех виджетов (встроенные + пользовательские).
-/// Позволяет открыть выбранный виджет, создать новый или удалить свой.
-/// Окно остаётся открытым после открытия виджета — можно открыть несколько.
+/// Позволяет открыть выбранный виджет, создать новый, удалить свой,
+/// закрепить/открепить в панели «Избранное» (v1.2).
 ///
 /// Подписан на смену языка (перестраивает список с новыми подписями),
 /// поэтому реализует IDisposable — отписка обязательна.
@@ -20,6 +20,7 @@ public class AddWidgetViewModel : ViewModelBase, IDisposable
     private readonly IWidgetWindowService _widgetWindows;
     private readonly ICreateWidgetWindowService _createWidget;
     private readonly ILocalizationService _loc;
+    private readonly IFavoritesService _favorites;
 
     public ObservableCollection<WidgetListItem> Widgets { get; } = new();
 
@@ -27,24 +28,47 @@ public class AddWidgetViewModel : ViewModelBase, IDisposable
     public WidgetListItem? SelectedWidget
     {
         get => _selectedWidget;
-        set => SetProperty(ref _selectedWidget, value);
+        set
+        {
+            if (SetProperty(ref _selectedWidget, value))
+                OnPropertyChanged(nameof(FavoriteToggleLabel));
+        }
+    }
+
+    /// <summary>
+    /// Локализованная подпись кнопки «★» — «В избранное» / «Убрать из избранного».
+    /// Меняется в зависимости от текущего состояния выбранного виджета.
+    /// </summary>
+    public string FavoriteToggleLabel
+    {
+        get
+        {
+            if (SelectedWidget == null)
+                return _loc.Get("AddWidget_AddToFavorites");
+            return _loc.Get(_favorites.IsFavorite(SelectedWidget.Widget.Id)
+                ? "AddWidget_RemoveFromFavorites"
+                : "AddWidget_AddToFavorites");
+        }
     }
 
     public ICommand OpenWidgetCommand { get; }
     public ICommand EditWidgetCommand { get; }
     public ICommand CreateWidgetCommand { get; }
     public ICommand DeleteWidgetCommand { get; }
+    public ICommand ToggleFavoriteCommand { get; }
 
     public AddWidgetViewModel(
         IWidgetService widgetService,
         IWidgetWindowService widgetWindows,
         ICreateWidgetWindowService createWidget,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        IFavoritesService favorites)
     {
         _widgetService = widgetService;
         _widgetWindows = widgetWindows;
         _createWidget = createWidget;
         _loc = localization;
+        _favorites = favorites;
 
         RefreshList();
 
@@ -65,8 +89,13 @@ public class AddWidgetViewModel : ViewModelBase, IDisposable
             // Удалять можно только пользовательские виджеты.
             _ => SelectedWidget != null && !SelectedWidget.IsBuiltIn);
 
+        ToggleFavoriteCommand = new RelayCommand(
+            _ => ToggleFavorite(),
+            _ => SelectedWidget != null);
+
         // Список содержит локализованные подписи — пересобираем при смене языка.
         _loc.LanguageChanged += OnLanguageChanged;
+        _favorites.FavoritesChanged += OnFavoritesChanged;
     }
 
     /// <summary>Перечитывает список виджетов из сервиса (после создания/удаления/смены языка).</summary>
@@ -76,14 +105,26 @@ public class AddWidgetViewModel : ViewModelBase, IDisposable
 
         Widgets.Clear();
         foreach (var w in _widgetService.GetAll())
-            Widgets.Add(new WidgetListItem(w, _loc));
+            Widgets.Add(new WidgetListItem(w, _loc, _favorites.IsFavorite(w.Id)));
 
         // Пытаемся восстановить выделение.
         if (previouslySelectedId != null)
             SelectedWidget = Widgets.FirstOrDefault(i => i.Widget.Id == previouslySelectedId);
     }
 
-    private void OnLanguageChanged(object? sender, EventArgs e) => RefreshList();
+    private void OnLanguageChanged(object? sender, EventArgs e)
+    {
+        RefreshList();
+        OnPropertyChanged(nameof(FavoriteToggleLabel));
+    }
+
+    private void OnFavoritesChanged(object? sender, EventArgs e)
+    {
+        // Состав избранного изменился — обновляем индикаторы «★» в списке
+        // и подпись кнопки «В избранное / Убрать».
+        RefreshList();
+        OnPropertyChanged(nameof(FavoriteToggleLabel));
+    }
 
     private void OpenSelected()
     {
@@ -125,11 +166,21 @@ public class AddWidgetViewModel : ViewModelBase, IDisposable
         if (result != MessageBoxResult.Yes) return;
 
         _widgetService.Remove(item.Widget.Id);
+        // Удаление виджета убирает его из избранного — иначе зависший Id засорял бы settings.
+        _favorites.Remove(item.Widget.Id);
         RefreshList();
+    }
+
+    private void ToggleFavorite()
+    {
+        if (SelectedWidget == null) return;
+        _favorites.Toggle(SelectedWidget.Widget.Id);
+        // RefreshList сработает через FavoritesChanged-подписку.
     }
 
     public void Dispose()
     {
         _loc.LanguageChanged -= OnLanguageChanged;
+        _favorites.FavoritesChanged -= OnFavoritesChanged;
     }
 }

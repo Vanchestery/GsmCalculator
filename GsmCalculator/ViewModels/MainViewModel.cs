@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text;
 using System.Windows.Input;
+using GsmCalculator.Helpers;
 using GsmCalculator.Models;
 using GsmCalculator.Services;
 
@@ -22,8 +23,13 @@ public class MainViewModel : ViewModelBase
     private readonly IAddWidgetWindowService _addWidgetWindow;
     private readonly ISettingsWindowService _settingsWindow;
     private readonly ILocalizationService _loc;
+    private readonly IClipboardService _clipboard;
+    private readonly IWidgetService _widgetService;
+    private readonly IFavoritesService _favorites;
+    private readonly IWidgetWindowService _widgetWindows;
 
     private CalculatorMode _mode;
+    private RoundingMode _roundingMode;
 
     // --- Classic mode state ---
     private double _leftOperand;
@@ -38,6 +44,8 @@ public class MainViewModel : ViewModelBase
     private bool _justEvaluated;   // true сразу после = — чтобы следующая цифра очистила preview
     private bool _isError;         // true когда на дисплее сообщение об ошибке.
                                    // Флаг вместо сравнения строки — текст «Ошибка» локализован.
+    private bool _justResolvedPercent; // true сразу после % — следующий оператор завершит чейн
+                                       // (matches Windows Calc Standard: 100+10%+5 = 115)
 
     private string _display = "0";
     public string Display
@@ -57,6 +65,35 @@ public class MainViewModel : ViewModelBase
     public ObservableCollection<HistoryEntry> History { get; } = new();
     public int HistorySize { get; private set; }
     public CalculatorMode Mode => _mode;
+
+    /// <summary>
+    /// Текущий режим округления (None / Integer / OneTenth). Управляется
+    /// циклической кнопкой в топ-баре. При смене — сохраняется в settings.json.
+    /// </summary>
+    public RoundingMode RoundingMode
+    {
+        get => _roundingMode;
+        private set
+        {
+            if (SetProperty(ref _roundingMode, value))
+            {
+                OnPropertyChanged(nameof(RoundingIndicator));
+                OnPropertyChanged(nameof(RoundingTooltip));
+            }
+        }
+    }
+
+    /// <summary>Короткая подпись на кнопке («∞», «1», «0.1»).</summary>
+    public string RoundingIndicator => RoundingFormatter.Indicator(_roundingMode);
+
+    /// <summary>Локализованный тултип («Округление: до целых» и т.д.).</summary>
+    public string RoundingTooltip => _loc.Get(_roundingMode switch
+    {
+        Models.RoundingMode.None     => "Main_Rounding_None",
+        Models.RoundingMode.Integer  => "Main_Rounding_Integer",
+        Models.RoundingMode.OneTenth => "Main_Rounding_OneTenth",
+        _                            => "Main_Rounding_None"
+    });
 
     private bool _isHistoryVisible = true;
     /// <summary>Видна ли панель истории. Состояние сохраняется в window-state.json.</summary>
@@ -78,6 +115,31 @@ public class MainViewModel : ViewModelBase
     public string HistoryToggleLabel
         => _loc.Get(_isHistoryVisible ? "Main_HideHistory" : "Main_ShowHistory");
 
+    private bool _isFavoritesVisible;
+    /// <summary>Видна ли панель «Избранное». Состояние сохраняется в window-state.json.</summary>
+    public bool IsFavoritesVisible
+    {
+        get => _isFavoritesVisible;
+        set
+        {
+            if (SetProperty(ref _isFavoritesVisible, value))
+                OnPropertyChanged(nameof(FavoritesToggleLabel));
+        }
+    }
+
+    /// <summary>Локализованная подпись кнопки переключения избранного.</summary>
+    public string FavoritesToggleLabel
+        => _loc.Get(_isFavoritesVisible ? "Main_HideFavorites" : "Main_ShowFavorites");
+
+    /// <summary>
+    /// Закреплённые виджеты — пересобирается при изменении состава избранного
+    /// или при изменении/удалении виджетов через WidgetsChanged.
+    /// </summary>
+    public ObservableCollection<Widget> Favorites { get; } = new();
+
+    /// <summary>True если в избранном ничего нет — для биндинга подсказки в панели.</summary>
+    public bool IsFavoritesEmpty => Favorites.Count == 0;
+
     // --- Команды ---
     public ICommand DigitCommand { get; }
     public ICommand DecimalCommand { get; }
@@ -86,27 +148,40 @@ public class MainViewModel : ViewModelBase
     public ICommand ClearCommand { get; }
     public ICommand ClearEntryCommand { get; }
     public ICommand BackspaceCommand { get; }
-    public ICommand NegateCommand { get; }
+    public ICommand PercentCommand { get; }
     public ICommand OpenSettingsCommand { get; }
     public ICommand OpenAddWidgetCommand { get; }
     public ICommand ToggleHistoryCommand { get; }
+    public ICommand ToggleFavoritesCommand { get; }
+    public ICommand CycleRoundingModeCommand { get; }
+    public ICommand CopyDisplayCommand { get; }
+    public ICommand OpenFavoriteCommand { get; }
 
     public MainViewModel(
         ICalculatorService calc,
         ISettingsService settings,
         IAddWidgetWindowService addWidgetWindow,
         ISettingsWindowService settingsWindow,
-        ILocalizationService localization)
+        ILocalizationService localization,
+        IClipboardService clipboard,
+        IWidgetService widgetService,
+        IFavoritesService favorites,
+        IWidgetWindowService widgetWindows)
     {
         _calc = calc;
         _settings = settings;
         _addWidgetWindow = addWidgetWindow;
         _settingsWindow = settingsWindow;
         _loc = localization;
+        _clipboard = clipboard;
+        _widgetService = widgetService;
+        _favorites = favorites;
+        _widgetWindows = widgetWindows;
 
         var loaded = settings.Load();
         HistorySize = loaded.HistorySize;
         _mode = loaded.CalculatorMode;
+        _roundingMode = loaded.RoundingMode;
 
         DigitCommand = new RelayCommand<string>(AppendDigit);
         DecimalCommand = new RelayCommand(_ => AppendDecimal());
@@ -115,15 +190,54 @@ public class MainViewModel : ViewModelBase
         ClearCommand = new RelayCommand(_ => Clear());
         ClearEntryCommand = new RelayCommand(_ => ClearEntry());
         BackspaceCommand = new RelayCommand(_ => Backspace());
-        NegateCommand = new RelayCommand(_ => Negate());
+        PercentCommand = new RelayCommand(_ => HandlePercent());
 
         OpenSettingsCommand = new RelayCommand(_ => _settingsWindow.OpenDialog());
         OpenAddWidgetCommand = new RelayCommand(_ => _addWidgetWindow.OpenDialog());
         ToggleHistoryCommand = new RelayCommand(_ => IsHistoryVisible = !IsHistoryVisible);
+        ToggleFavoritesCommand = new RelayCommand(_ => IsFavoritesVisible = !IsFavoritesVisible);
+        CycleRoundingModeCommand = new RelayCommand(_ => CycleRoundingMode());
+        CopyDisplayCommand = new RelayCommand(_ => CopyDisplay(), _ => !_isError);
+        OpenFavoriteCommand = new RelayCommand<Widget>(OpenFavorite);
+
+        // Подписки на изменения избранного и виджетов — рефреш панели.
+        // Singleton VM → отписка не нужна (живёт до конца процесса).
+        _favorites.FavoritesChanged += (_, _) => RefreshFavorites();
+        _widgetService.WidgetsChanged += (_, _) => RefreshFavorites();
+        RefreshFavorites();
 
         // MainViewModel — singleton, поэтому отписка не нужна (живёт до конца процесса).
-        // При смене языка перерисовываем подпись кнопки toggle.
-        _loc.LanguageChanged += (_, _) => OnPropertyChanged(nameof(HistoryToggleLabel));
+        // При смене языка перерисовываем подписи привязанных строк.
+        _loc.LanguageChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(HistoryToggleLabel));
+            OnPropertyChanged(nameof(FavoritesToggleLabel));
+            OnPropertyChanged(nameof(RoundingTooltip));
+        };
+    }
+
+    /// <summary>
+    /// Перерисовывает <see cref="Favorites"/> по текущему составу избранного
+    /// и актуальным виджетам в WidgetService. Id, для которых виджет не найден
+    /// (удалён, но Id остался в settings) — пропускаются: панель показывает
+    /// только реально доступные виджеты.
+    /// </summary>
+    private void RefreshFavorites()
+    {
+        Favorites.Clear();
+        foreach (var id in _favorites.GetFavoriteIds())
+        {
+            var w = _widgetService.Find(id);
+            if (w != null) Favorites.Add(w);
+        }
+        OnPropertyChanged(nameof(IsFavoritesEmpty));
+    }
+
+    /// <summary>Клик по элементу панели избранного — открывает виджет.</summary>
+    private void OpenFavorite(Widget? widget)
+    {
+        if (widget == null) return;
+        _widgetWindows.OpenOrFocus(widget);
     }
 
     // =================================================================
@@ -150,12 +264,17 @@ public class MainViewModel : ViewModelBase
 
     public void SetDisplayValue(double value)
     {
-        Display = _calc.FormatNumber(value);
+        // Применяем округление по текущему режиму — виджет «Вставить в калькулятор»
+        // даёт точное число конвертации, но юзер хочет увидеть его уже округлённым
+        // (по K.4 — в учёте ГСМ работают именно с округлённой величиной).
+        var rounded = RoundingFormatter.Apply(value, _roundingMode);
+        Display = _calc.FormatNumber(rounded);
         ResetCalculationState();
         ExpressionPreview = "";
         _justEvaluated = false;
         _isNewNumber = true;
         _isError = false;
+        _justResolvedPercent = false;
     }
 
     public void ApplyHistorySize(int newSize)
@@ -169,6 +288,25 @@ public class MainViewModel : ViewModelBase
         if (_mode == mode) return;
         _mode = mode;
         Clear();
+    }
+
+    /// <summary>
+    /// Циклически переключает режим округления (None → Integer → OneTenth → None).
+    /// Сохраняет новый режим в settings.json через ISettingsService.
+    ///
+    /// Не пересчитывает то что уже на дисплее — округление применяется только
+    /// к НОВЫМ результатам (по K.5 = Y «округление в момент =»). История тоже
+    /// не пересчитывается (по K.6 — округление в момент записи).
+    /// </summary>
+    public void CycleRoundingMode()
+    {
+        RoundingMode = RoundingFormatter.Next(_roundingMode);
+
+        // Сохраняем. Load+Save паттерн используется чтобы не потерять остальные
+        // поля настроек (тема, язык и т.д., которые меняются в SettingsViewModel).
+        var s = _settings.Load();
+        s.RoundingMode = _roundingMode;
+        _settings.Save(s);
     }
 
     /// <summary>Значение дисплея для сохранения в сессию. В состоянии ошибки — «0».</summary>
@@ -197,6 +335,7 @@ public class MainViewModel : ViewModelBase
         _isNewNumber = true;
         _justEvaluated = false;
         _isError = false;
+        _justResolvedPercent = false;
     }
 
     // =================================================================
@@ -213,6 +352,8 @@ public class MainViewModel : ViewModelBase
             ExpressionPreview = "";
             _justEvaluated = false;
         }
+        // Юзер перебивает результат %: флаг больше не актуален.
+        _justResolvedPercent = false;
 
         if (_isNewNumber || _display == "0" || _isError)
         {
@@ -233,6 +374,7 @@ public class MainViewModel : ViewModelBase
             ExpressionPreview = "";
             _justEvaluated = false;
         }
+        _justResolvedPercent = false;
 
         if (_isNewNumber || _isError)
         {
@@ -275,10 +417,16 @@ public class MainViewModel : ViewModelBase
 
     private void HandleOperationClassic(char op)
     {
-        if (_isError) { ClearClassicState(); _isNewNumber = true; return; }
+        if (_isError) { ClearClassicState(); _isNewNumber = true; _justResolvedPercent = false; return; }
         _justEvaluated = false; // оператор после = — начало новой цепочки
 
-        if (_pendingOp.HasValue && !_isNewNumber)
+        // После % мы выставляем _isNewNumber=true (цифра ЗАМЕНЯЕТ),
+        // но при этом следующий оператор всё равно должен закрыть чейн.
+        // Поэтому здесь форсируем «нужно вычислить» если только что был %.
+        var needsEvaluation = _pendingOp.HasValue && (!_isNewNumber || _justResolvedPercent);
+        _justResolvedPercent = false; // потребили флаг
+
+        if (needsEvaluation)
         {
             if (!TryEvaluatePendingClassic()) return;
         }
@@ -307,6 +455,7 @@ public class MainViewModel : ViewModelBase
         _justEvaluated = true;
         _pendingOp = null;
         _isNewNumber = true;
+        _justResolvedPercent = false;
     }
 
     private bool TryEvaluatePendingClassic()
@@ -319,6 +468,10 @@ public class MainViewModel : ViewModelBase
         try
         {
             var result = _calc.Apply(_leftOperand, op, right);
+            // K.5=Y: округляем «на фиксировании» — это и нажатие =,
+            // и нажатие следующего оператора (он закрывает предыдущий операнд).
+            // Аккумулятор уносит уже округлённое — дальнейшая цепочка считает с него.
+            result = RoundingFormatter.Apply(result, _roundingMode);
             AddToHistory(_calc.FormatExpression(_leftOperand, op, right), _calc.FormatNumber(result));
             Display = _calc.FormatNumber(result);
             _leftOperand = result;
@@ -337,10 +490,23 @@ public class MainViewModel : ViewModelBase
 
     private void HandleOperationEngineering(char op)
     {
-        if (_isError) { ClearEngineeringState(); _isNewNumber = true; return; }
+        if (_isError) { ClearEngineeringState(); _isNewNumber = true; _justResolvedPercent = false; return; }
         _justEvaluated = false;
 
-        if (_isNewNumber)
+        // _justResolvedPercent трактуется как «только что доввели число» —
+        // оператор должен зафиксировать процентный результат как операнд,
+        // а не заменить последний оператор.
+        var treatAsFresh = !_isNewNumber || _justResolvedPercent;
+        _justResolvedPercent = false;
+
+        if (treatAsFresh)
+        {
+            // Только что вводили цифры (или закончили %) — фиксируем операнд + оператор.
+            _engOperands.Add(GetDisplayValue());
+            _engOps.Add(op);
+            _isNewNumber = true;
+        }
+        else
         {
             if (_engOps.Count > 0)
             {
@@ -353,13 +519,6 @@ public class MainViewModel : ViewModelBase
                 _engOperands.Add(GetDisplayValue());
                 _engOps.Add(op);
             }
-        }
-        else
-        {
-            // Только что вводили цифры — фиксируем операнд + оператор.
-            _engOperands.Add(GetDisplayValue());
-            _engOps.Add(op);
-            _isNewNumber = true;
         }
 
         UpdateEngineeringPreview();
@@ -379,6 +538,9 @@ public class MainViewModel : ViewModelBase
         try
         {
             var result = EvaluateWithPrecedence(allOperands, allOps);
+            // K.5=Y: округление на =. В Engineering выражение считается «одним хапом»,
+            // поэтому промежуточные операнды округлению не подвергаются — только итог.
+            result = RoundingFormatter.Apply(result, _roundingMode);
             var resultStr = _calc.FormatNumber(result);
 
             AddToHistory(expression, resultStr);
@@ -388,6 +550,7 @@ public class MainViewModel : ViewModelBase
 
             ClearEngineeringState();
             _isNewNumber = true;
+            _justResolvedPercent = false;
         }
         catch (DivideByZeroException)
         {
@@ -472,6 +635,7 @@ public class MainViewModel : ViewModelBase
         _justEvaluated = false;
         _isNewNumber = true;
         _isError = false;
+        _justResolvedPercent = false;
     }
 
     private void ClearEntry()
@@ -479,15 +643,16 @@ public class MainViewModel : ViewModelBase
         Display = "0";
         _isNewNumber = true;
         _isError = false;
+        _justResolvedPercent = false;
         // Превью оставляем — pendingOp/токены не сбрасываем.
     }
 
     private void Backspace()
     {
         if (_isNewNumber || _display == "0" || _isError) return;
+        _justResolvedPercent = false;
 
-        var isNegativeSingleDigit = _display.Length == 2 && _display[0] == '-';
-        if (_display.Length == 1 || isNegativeSingleDigit)
+        if (_display.Length == 1)
         {
             Display = "0";
             _isNewNumber = true;
@@ -497,10 +662,52 @@ public class MainViewModel : ViewModelBase
         Display = _display[..^1];
     }
 
-    private void Negate()
+    /// <summary>
+    /// Копирует текущий дисплей в буфер обмена.
+    /// Дисплей уже содержит округлённое значение (по K — округление
+    /// происходит в момент = и SetDisplayValue), поэтому в буфер летит
+    /// именно то что юзер видит. В состоянии ошибки команда отключена
+    /// через CanExecute (см. _isError в инициализации команды).
+    /// </summary>
+    private void CopyDisplay()
     {
-        if (_display == "0" || _isError) return;
-        Display = _display.StartsWith('-') ? _display[1..] : "-" + _display;
+        if (_isError) return;
+        _clipboard.SetText(_display);
+    }
+
+    /// <summary>
+    /// Контекстный процент в стиле Windows Calc Standard.
+    ///
+    /// В Classic с ожидающим оператором: процент трактуется относительно
+    /// аккумулятора и оператора (см. <see cref="ICalculatorService.ResolvePercent"/>).
+    /// В Engineering и в Classic без оператора: простое <c>value / 100</c>.
+    ///
+    /// После % следующая цифра ЗАМЕНЯЕТ дисплей (как новый ввод). Чтобы
+    /// корректно продолжить цепочку через оператор («100 + 10% + 5 = 115»),
+    /// используется флаг <see cref="_justResolvedPercent"/> — он заставляет
+    /// HandleOperationClassic «закрыть» предыдущую операцию даже при _isNewNumber=true.
+    /// </summary>
+    private void HandlePercent()
+    {
+        if (_isError) return;
+        _justEvaluated = false;
+
+        var current = GetDisplayValue();
+        double resolved;
+
+        if (_mode == CalculatorMode.Classic && _pendingOp.HasValue)
+        {
+            resolved = _calc.ResolvePercent(_leftOperand, _pendingOp.Value, current);
+        }
+        else
+        {
+            // Engineering или Classic без оператора — value/100.
+            resolved = current / 100.0;
+        }
+
+        Display = _calc.FormatNumber(resolved);
+        _isNewNumber = true;
+        _justResolvedPercent = true;
     }
 
     // =================================================================
@@ -533,6 +740,7 @@ public class MainViewModel : ViewModelBase
         ExpressionPreview = "";
         _justEvaluated = false;
         _isNewNumber = true;
+        _justResolvedPercent = false;
     }
 
     private void AddToHistory(string expression, string result)

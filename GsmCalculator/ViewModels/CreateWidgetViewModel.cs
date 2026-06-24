@@ -21,6 +21,7 @@ public class CreateWidgetViewModel : ViewModelBase
 {
     private readonly IWidgetService _widgetService;
     private readonly ILocalizationService _loc;
+    private readonly IFavoritesService _favorites;
     private readonly RelayCommand _saveCommand;
 
     /// <summary>Id редактируемого виджета. null для режима «создание».</summary>
@@ -72,6 +73,18 @@ public class CreateWidgetViewModel : ViewModelBase
         set => SetProperty(ref _decimalPlaces, Math.Clamp(value, 0, 3));
     }
 
+    private bool _isFavorite;
+    /// <summary>
+    /// Закреплён ли виджет в панели «Избранное».
+    /// В create-mode — initial false. В edit-mode — текущее состояние из IFavoritesService.
+    /// Применяется в Save() через IFavoritesService.Add/Remove.
+    /// </summary>
+    public bool IsFavorite
+    {
+        get => _isFavorite;
+        set => SetProperty(ref _isFavorite, value);
+    }
+
     private string _validationMessage = string.Empty;
     /// <summary>Текст ошибки валидации (пусто — всё ок).</summary>
     public string ValidationMessage
@@ -100,10 +113,12 @@ public class CreateWidgetViewModel : ViewModelBase
     public CreateWidgetViewModel(
         IWidgetService widgetService,
         ILocalizationService localization,
+        IFavoritesService favorites,
         Widget? toEdit = null)
     {
         _widgetService = widgetService;
         _loc = localization;
+        _favorites = favorites;
 
         if (toEdit != null)
         {
@@ -116,6 +131,7 @@ public class CreateWidgetViewModel : ViewModelBase
             _isFixedDensity = toEdit.DensityMode == DensityMode.Fixed;
             _densityText = toEdit.DefaultDensity.ToString(CultureInfo.InvariantCulture);
             _decimalPlaces = Math.Clamp(toEdit.DefaultDecimalPlaces, 0, 3);
+            _isFavorite = _favorites.IsFavorite(toEdit.Id);
         }
 
         _saveCommand = new RelayCommand(_ => Save(), _ => IsValid());
@@ -172,6 +188,12 @@ public class CreateWidgetViewModel : ViewModelBase
             _widgetService.Update(widget);
         else
             _widgetService.Add(widget);
+
+        // Применяем состояние «Избранное» через сервис (Add/Remove idempotent).
+        if (_isFavorite)
+            _favorites.Add(widget.Id);
+        else
+            _favorites.Remove(widget.Id);
 
         CloseRequested?.Invoke(this, true);
     }

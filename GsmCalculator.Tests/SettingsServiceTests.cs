@@ -36,6 +36,7 @@ public class SettingsServiceTests : IDisposable
         Assert.Equal(ColorTheme.Dark, settings.Theme);
         Assert.Equal(AppLanguage.Russian, settings.Language);
         Assert.Equal(CalculatorMode.Classic, settings.CalculatorMode);
+        Assert.False(settings.AlwaysOnTop);
     }
 
     [Fact]
@@ -60,7 +61,8 @@ public class SettingsServiceTests : IDisposable
             Theme = ColorTheme.Blue,
             StartupBehavior = StartupBehavior.AlwaysContinue,
             Language = AppLanguage.English,
-            CalculatorMode = CalculatorMode.Engineering
+            CalculatorMode = CalculatorMode.Engineering,
+            AlwaysOnTop = true
         };
 
         sut.Save(original);
@@ -72,6 +74,7 @@ public class SettingsServiceTests : IDisposable
         Assert.Equal(StartupBehavior.AlwaysContinue, loaded.StartupBehavior);
         Assert.Equal(AppLanguage.English, loaded.Language);
         Assert.Equal(CalculatorMode.Engineering, loaded.CalculatorMode);
+        Assert.True(loaded.AlwaysOnTop);
     }
 
     [Fact]

@@ -131,6 +131,14 @@ public class MainViewModel : ViewModelBase
     public string FavoritesToggleLabel
         => _loc.Get(_isFavoritesVisible ? "Main_HideFavorites" : "Main_ShowFavorites");
 
+    /// <summary>Segoe MDL2: Hide когда виджеты видны, View когда спрятаны тогглом.</summary>
+    public string WidgetsToggleIcon
+        => _widgetWindows.AreWidgetsHidden ? "\uE8F4" : "\uE890";
+
+    /// <summary>Локализованный тултип кнопки скрытия/показа виджетов.</summary>
+    public string WidgetsToggleLabel
+        => _loc.Get(_widgetWindows.AreWidgetsHidden ? "Main_ShowWidgets" : "Main_HideWidgets");
+
     /// <summary>
     /// Закреплённые виджеты — пересобирается при изменении состава избранного
     /// или при изменении/удалении виджетов через WidgetsChanged.
@@ -156,6 +164,7 @@ public class MainViewModel : ViewModelBase
     public ICommand CycleRoundingModeCommand { get; }
     public ICommand CopyDisplayCommand { get; }
     public ICommand OpenFavoriteCommand { get; }
+    public ICommand ToggleWidgetsVisibilityCommand { get; }
 
     public MainViewModel(
         ICalculatorService calc,
@@ -199,12 +208,15 @@ public class MainViewModel : ViewModelBase
         CycleRoundingModeCommand = new RelayCommand(_ => CycleRoundingMode());
         CopyDisplayCommand = new RelayCommand(_ => CopyDisplay(), _ => !_isError);
         OpenFavoriteCommand = new RelayCommand<Widget>(OpenFavorite);
+        ToggleWidgetsVisibilityCommand = new RelayCommand(_ => _widgetWindows.ToggleVisibility());
 
         // Подписки на изменения избранного и виджетов — рефреш панели.
         // Singleton VM → отписка не нужна (живёт до конца процесса).
         _favorites.FavoritesChanged += (_, _) => RefreshFavorites();
         _widgetService.WidgetsChanged += (_, _) => RefreshFavorites();
         RefreshFavorites();
+
+        _widgetWindows.VisibilityChanged += (_, _) => NotifyWidgetsToggle();
 
         // MainViewModel — singleton, поэтому отписка не нужна (живёт до конца процесса).
         // При смене языка перерисовываем подписи привязанных строк.
@@ -213,6 +225,7 @@ public class MainViewModel : ViewModelBase
             OnPropertyChanged(nameof(HistoryToggleLabel));
             OnPropertyChanged(nameof(FavoritesToggleLabel));
             OnPropertyChanged(nameof(RoundingTooltip));
+            OnPropertyChanged(nameof(WidgetsToggleLabel));
         };
     }
 
@@ -231,6 +244,12 @@ public class MainViewModel : ViewModelBase
             if (w != null) Favorites.Add(w);
         }
         OnPropertyChanged(nameof(IsFavoritesEmpty));
+    }
+
+    private void NotifyWidgetsToggle()
+    {
+        OnPropertyChanged(nameof(WidgetsToggleIcon));
+        OnPropertyChanged(nameof(WidgetsToggleLabel));
     }
 
     /// <summary>Клик по элементу панели избранного — открывает виджет.</summary>

@@ -1,3 +1,4 @@
+using System.Windows;
 using GsmCalculator.ViewModels;
 using GsmCalculator.Views;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +36,8 @@ public class AddWidgetWindowService : IAddWidgetWindowService
             _sp.GetRequiredService<IFavoritesService>());
 
         _window = new AddWidgetWindow { DataContext = vm };
+        _window.Owner = Application.Current?.MainWindow;
+        _window.Topmost = _sp.GetRequiredService<ISettingsService>().Load().AlwaysOnTop;
         _window.Closed += (_, _) =>
         {
             _window = null;

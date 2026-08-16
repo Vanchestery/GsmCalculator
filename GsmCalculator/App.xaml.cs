@@ -50,6 +50,7 @@ public partial class App : Application
         };
         MainWindow = mainWindow;
         mainWindow.Closing += OnMainWindowClosing;
+        mainWindow.StateChanged += OnMainWindowStateChanged;
 
         // 4. Восстанавливаем позицию и размер окна (или центрируем при первом запуске).
         //    Делаем ДО Show — чтобы окно сразу появилось на нужном месте, без «прыжка».
@@ -60,6 +61,7 @@ public partial class App : Application
 
         // 6. Показываем главное окно.
         mainWindow.Show();
+        Services.GetRequiredService<IWidgetWindowService>().ApplyAlwaysOnTop(settings.AlwaysOnTop);
 
         // Регистрируем главное окно как «хост» для магнитного прилипания виджетов.
         // ДО Show подписаться можно, но Left/Top могут быть NaN, безопаснее после.
@@ -91,8 +93,10 @@ public partial class App : Application
             window.WindowStartupLocation = WindowStartupLocation.Manual;
             window.Left = state.Left;
             window.Top = state.Top;
-            window.Width = state.Width;
-            window.Height = state.Height;
+            if (state.Width >= window.MinWidth)
+                window.Width = state.Width;
+            if (state.Height >= window.MinHeight)
+                window.Height = state.Height;
             if (state.IsMaximized)
                 window.WindowState = System.Windows.WindowState.Maximized;
         }
@@ -167,6 +171,17 @@ public partial class App : Application
     }
 
     /// <summary>
+    /// Owned-виджеты Windows снова показывает при разворачивании хоста.
+    /// Тех, кого спрятал тоггл, прячем обратно.
+    /// </summary>
+    private void OnMainWindowStateChanged(object? sender, EventArgs e)
+    {
+        if (sender is not Window window) return;
+        if (window.WindowState == WindowState.Minimized) return;
+        Services.GetRequiredService<IWidgetWindowService>().ReapplyHiddenState();
+    }
+
+    /// <summary>
     /// При закрытии главного окна сохраняем сессию И состояние окна.
     /// В этот момент виджеты ещё открыты — можно снять их позиции.
     /// Сессия и состояние окна — два независимых файла (см. ТЗ к C),
@@ -200,11 +215,14 @@ public partial class App : Application
         {
             if (sender is not Window window) return;
 
-            // RestoreBounds — это «нормальные» Left/Top/Width/Height
-            // даже если окно сейчас Maximized. Если пусто (например окно
-            // ни разу не показывалось нормально) — fallback на текущие свойства.
-            var bounds = window.RestoreBounds;
-            if (bounds.IsEmpty)
+            // В Normal надёжнее текущие Left/Top/Width/Height: RestoreBounds у WPF
+            // иногда остаётся стартовым размером из XAML, пока окно ни разу
+            // не сворачивали/разворачивали. RestoreBounds нужен только когда
+            // окно Maximized/Minimized — иначе сохраним размер экрана / -32000.
+            var bounds = window.WindowState == WindowState.Normal
+                ? new Rect(window.Left, window.Top, window.Width, window.Height)
+                : window.RestoreBounds;
+            if (bounds.IsEmpty || bounds.Width < 1 || bounds.Height < 1)
                 bounds = new Rect(window.Left, window.Top, window.Width, window.Height);
 
             var windowStateService = Services.GetRequiredService<IWindowStateService>();

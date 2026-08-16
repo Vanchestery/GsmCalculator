@@ -41,61 +41,81 @@ public static class MagnetismCalculator
     /// сателлит висит на 100 пикселей выше или ниже хоста — он будет рядом,
     /// но магнитно неинтуитивно.
     /// </summary>
-    /// <param name="satellite">Прямоугольник виджета.</param>
+    /// <param name="satellite">Прямоугольник виджета (логические Left/Top/Width/Height).</param>
     /// <param name="host">Прямоугольник главного окна.</param>
     /// <param name="threshold">Максимальное расстояние до грани в пикселях.</param>
-    public static SatelliteSnapState? TryFindSnap(Rect satellite, Rect host, double threshold)
+    /// <param name="hostInsets">DWM-тень хоста. Дистанция считается по визуальным граням,
+    /// иначе после ApplySnap логический зазор (~14px) больше порога и снэп «отваливается»
+    /// при восстановлении сессии.</param>
+    /// <param name="satelliteInsets">DWM-тень сателлита.</param>
+    public static SatelliteSnapState? TryFindSnap(
+        Rect satellite, Rect host, double threshold,
+        Thickness hostInsets = default, Thickness satelliteInsets = default)
     {
+        var sat = ToVisual(satellite, satelliteInsets);
+        var h = ToVisual(host, hostInsets);
+
         SatelliteSnapState? best = null;
         double bestDistance = double.MaxValue;
 
-        // === Right: левая грань сателлита близко к правой грани хоста ===
-        // Требует вертикального перекрытия с хостом.
-        if (HasVerticalOverlap(satellite, host))
+        // Offset оставляем логическим: ComputePosition ставит sat.Top = host.Top + offset.
+        var logicalTopOffset = satellite.Top - host.Top;
+        var logicalLeftOffset = satellite.Left - host.Left;
+
+        // === Right: левая визуальная грань сателлита близко к правой визуальной грани хоста ===
+        if (HasVerticalOverlap(sat, h))
         {
-            var dist = Math.Abs(satellite.Left - host.Right);
+            var dist = Math.Abs(sat.Left - h.Right);
             if (dist <= threshold && dist < bestDistance)
             {
                 bestDistance = dist;
-                best = new SatelliteSnapState(SnapEdge.Right, satellite.Top - host.Top);
+                best = new SatelliteSnapState(SnapEdge.Right, logicalTopOffset);
             }
         }
 
-        // === Left: правая грань сателлита близко к левой грани хоста ===
-        if (HasVerticalOverlap(satellite, host))
+        // === Left: правая визуальная грань сателлита близко к левой визуальной грани хоста ===
+        if (HasVerticalOverlap(sat, h))
         {
-            var dist = Math.Abs((satellite.Left + satellite.Width) - host.Left);
+            var dist = Math.Abs(sat.Right - h.Left);
             if (dist <= threshold && dist < bestDistance)
             {
                 bestDistance = dist;
-                best = new SatelliteSnapState(SnapEdge.Left, satellite.Top - host.Top);
+                best = new SatelliteSnapState(SnapEdge.Left, logicalTopOffset);
             }
         }
 
-        // === Bottom: верхняя грань сателлита близко к нижней грани хоста ===
-        if (HasHorizontalOverlap(satellite, host))
+        // === Bottom: верхняя визуальная грань сателлита близко к нижней визуальной грани хоста ===
+        if (HasHorizontalOverlap(sat, h))
         {
-            var dist = Math.Abs(satellite.Top - host.Bottom);
+            var dist = Math.Abs(sat.Top - h.Bottom);
             if (dist <= threshold && dist < bestDistance)
             {
                 bestDistance = dist;
-                best = new SatelliteSnapState(SnapEdge.Bottom, satellite.Left - host.Left);
+                best = new SatelliteSnapState(SnapEdge.Bottom, logicalLeftOffset);
             }
         }
 
-        // === Top: нижняя грань сателлита близко к верхней грани хоста ===
-        if (HasHorizontalOverlap(satellite, host))
+        // === Top: нижняя визуальная грань сателлита близко к верхней визуальной грани хоста ===
+        if (HasHorizontalOverlap(sat, h))
         {
-            var dist = Math.Abs((satellite.Top + satellite.Height) - host.Top);
+            var dist = Math.Abs(sat.Bottom - h.Top);
             if (dist <= threshold && dist < bestDistance)
             {
                 bestDistance = dist;
-                best = new SatelliteSnapState(SnapEdge.Top, satellite.Left - host.Left);
+                best = new SatelliteSnapState(SnapEdge.Top, logicalLeftOffset);
             }
         }
 
         return best;
     }
+
+    /// <summary>Логический прямоугольник окна минус невидимая DWM-тень.</summary>
+    private static Rect ToVisual(Rect r, Thickness insets)
+        => new(
+            r.Left + insets.Left,
+            r.Top + insets.Top,
+            Math.Max(0, r.Width - insets.Left - insets.Right),
+            Math.Max(0, r.Height - insets.Top - insets.Bottom));
 
     /// <summary>
     /// Возвращает Left/Top сателлита для того чтобы он сидел в указанном snap-состоянии

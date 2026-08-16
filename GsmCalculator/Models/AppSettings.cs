@@ -45,6 +45,13 @@ public class AppSettings
     public List<Guid> FavoriteWidgetIds { get; set; } = new();
 
     /// <summary>
+    /// Если true — главное окно и виджеты остаются поверх всех приложений.
+    /// Если false (по умолчанию) — уходят под активное окно другого процесса,
+    /// но виджеты остаются над калькулятором за счёт Owner = MainWindow.
+    /// </summary>
+    public bool AlwaysOnTop { get; set; }
+
+    /// <summary>
     /// Возвращает копию настроек по умолчанию.
     /// Используется при первом запуске или сбросе настроек.
     /// </summary>

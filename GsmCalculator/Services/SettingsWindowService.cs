@@ -22,6 +22,7 @@ public class SettingsWindowService : ISettingsWindowService
             _sp.GetRequiredService<ISettingsService>(),
             _sp.GetRequiredService<IThemeService>(),
             _sp.GetRequiredService<ILocalizationService>(),
+            _sp.GetRequiredService<IWidgetWindowService>(),
             _sp.GetRequiredService<MainViewModel>());
 
         var window = new SettingsWindow

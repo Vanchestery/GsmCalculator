@@ -33,6 +33,8 @@
     <sys:String x:Key="Main_Rounding_None">Rounding: off</sys:String>
     <sys:String x:Key="Main_Rounding_Integer">Rounding: integer</sys:String>
     <sys:String x:Key="Main_Rounding_OneTenth">Rounding: 0.1</sys:String>
+    <sys:String x:Key="Main_HideWidgets">Hide widgets</sys:String>
+    <sys:String x:Key="Main_ShowWidgets">Show widgets</sys:String>
 
     <!-- Widget -->
     <sys:String x:Key="Widget_Density">Density:</sys:String>
@@ -61,6 +63,7 @@
     <sys:String x:Key="Settings_LangEn">English</sys:String>
     <sys:String x:Key="Settings_ModeClassic">Classic (left to right)</sys:String>
     <sys:String x:Key="Settings_ModeEngineering">Engineering (× ÷ precedence)</sys:String>
+    <sys:String x:Key="Settings_AlwaysOnTop">Always on top of other windows</sys:String>
 
     <!-- Add widget window -->
     <sys:String x:Key="AddWidget_Title">Add widget</sys:String>

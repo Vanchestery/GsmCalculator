@@ -18,9 +18,7 @@
 
 ## Скриншоты
 
-![Главное окно — тёмная тема](docs/screenshots/main-dark.png)
-![Виджет конвертации](docs/screenshots/widget.png)
-![Окно настроек](docs/screenshots/settings.png)
+Актуальные кадры (главное окно, виджеты, настройки) — в [`docs/screenshots/`](docs/screenshots/) после ближайшего релиза.
 
 ## Возможности
 
@@ -34,7 +32,11 @@
   - Встроенные: АИ-92, ДТ-Л, ДТ-З, ТС-1, Масла, ТЖ, ОЖ.
   - Своя плотность (для переменных) и округление 0..3 знака.
   - Кнопка «Вставить в калькулятор» отправляет результат на дисплей.
+  - Одним кликом в топ-баре — скрыть все открытые виджеты и вернуть ту же пачку.
+- **Always on top** — опция в настройках: калькулятор и виджеты поверх всех окон или обычный z-order (по умолчанию виджеты уходят вместе с калькулятором под активное приложение).
 - **Создание пользовательских виджетов** с фиксированной/переменной плотностью.
+- **Избранное** — закреплённые виджеты на боковой панели главного окна.
+- **Округление** дисплея циклом в топ-баре: выкл / до целых / до 0.1.
 - **Три цветовые темы** Light / Dark / Blue с тёмной полосой заголовка через DWM (Windows 10 1809+).
 - **Локализация RU/EN** на лету через `ResourceDictionary` и `DynamicResource`.
 - **Сохранение сессии**: дисплей, история, открытые виджеты и их позиции восстанавливаются между запусками.
@@ -65,7 +67,10 @@ GsmCalculator/
 │   ├── IConversionService     л↔кг
 │   ├── ISettingsService       JSON-настройки
 │   ├── IWidgetService         каталог виджетов
+│   ├── IFavoritesService      закреплённые виджеты
 │   ├── ISessionService        сохранение сессии
+│   ├── IWindowStateService    позиция главного окна
+│   ├── IWindowMagnetismService прилипание виджетов
 │   ├── ILocalizationService   локализация
 │   ├── IThemeService          цветовые темы
 │   └── I*WindowService        открытие окон без знания о View
@@ -76,7 +81,10 @@ GsmCalculator/
 │   ├── ControlStyles.xaml     кастомный 3D-шаблон Button
 │   └── app.ico
 └── Helpers/
-    └── ButtonProps.cs         attached property для CornerRadius
+    ├── ButtonProps.cs         attached property для CornerRadius
+    ├── RoundingFormatter.cs   режимы округления дисплея
+    ├── MagnetismCalculator.cs геометрия прилипания
+    └── TitleBarHelper.cs      тёмная полоса заголовка (DWM)
 ```
 
 **Ключевые архитектурные решения:**
@@ -87,6 +95,7 @@ GsmCalculator/
 - **Темы и язык** переключаются на лету через подмену `ResourceDictionary` + `DynamicResource` в XAML.
 - **Долгоживущие VM** (Widget, AddWidget) подписаны на `LanguageChanged` и реализуют `IDisposable` — иначе синглтон `LocalizationService` держал бы ссылки на закрытые VM (утечка памяти).
 - **Сессия**: при `MainWindow.Closing` снимаются позиции виджетов до их закрытия. `ShutdownMode=OnMainWindowClose` гарантирует завершение приложения при закрытии главного окна.
+- **Z-order виджетов**: `Owner = MainWindow` держит виджеты над калькулятором; `Topmost` включается только настройкой «Всегда поверх». Скрытие пачки — `Hide()`, не `Close()`, чтобы не терять плотность/результат/позицию.
 
 ## Сборка и запуск
 
@@ -113,16 +122,17 @@ dotnet run --project GsmCalculator
 dotnet test
 ```
 
-~80 тестов на xUnit + Moq:
-- сервисы (CalculatorService, ConversionService, SettingsService, WidgetService, SessionService);
-- MainViewModel — state machine, оба режима калькулятора, история, ошибки.
+~230 тестов на xUnit + Moq:
+- сервисы (CalculatorService, ConversionService, SettingsService, WidgetService, SessionService, FavoritesService);
+- MainViewModel — state machine, оба режима калькулятора, история, округление, тоггл виджетов.
 
 ## Где хранятся пользовательские данные
 
 `%AppData%\GsmCalculator\`:
 - `settings.json` — настройки приложения;
 - `widgets.json` — каталог виджетов (встроенные + пользовательские);
-- `session.json` — сохранённая сессия (если есть).
+- `session.json` — сохранённая сессия (если есть);
+- `window-state.json` — позиция и размер главного окна.
 
 ## Лицензия
 

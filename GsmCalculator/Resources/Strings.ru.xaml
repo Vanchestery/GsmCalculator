@@ -34,6 +34,8 @@
     <sys:String x:Key="Main_Rounding_None">Округление: выкл</sys:String>
     <sys:String x:Key="Main_Rounding_Integer">Округление: до целых</sys:String>
     <sys:String x:Key="Main_Rounding_OneTenth">Округление: до 0.1</sys:String>
+    <sys:String x:Key="Main_HideWidgets">Скрыть виджеты</sys:String>
+    <sys:String x:Key="Main_ShowWidgets">Показать виджеты</sys:String>
 
     <!-- Виджет -->
     <sys:String x:Key="Widget_Density">Плотность:</sys:String>
@@ -62,6 +64,7 @@
     <sys:String x:Key="Settings_LangEn">English</sys:String>
     <sys:String x:Key="Settings_ModeClassic">Классический (слева направо)</sys:String>
     <sys:String x:Key="Settings_ModeEngineering">Инженерный (приоритет × ÷)</sys:String>
+    <sys:String x:Key="Settings_AlwaysOnTop">Всегда поверх других окон</sys:String>
 
     <!-- Окно «Добавить виджет» -->
     <sys:String x:Key="AddWidget_Title">Добавить виджет</sys:String>

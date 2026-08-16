@@ -148,6 +148,12 @@
                     FontSize="13" FontWeight="Bold" Padding="10,8" MinWidth="40"
                     ToolTip="{Binding RoundingTooltip}"
                     Command="{Binding CycleRoundingModeCommand}"/>
+            <!-- Тоггл видимости всех открытых виджетов. Иконка Hide/View из Segoe MDL2. -->
+            <Button Content="{Binding WidgetsToggleIcon}"
+                    Style="{StaticResource TopBarButtonStyle}"
+                    FontFamily="Segoe MDL2 Assets" FontSize="16" Padding="10,8"
+                    ToolTip="{Binding WidgetsToggleLabel}"
+                    Command="{Binding ToggleWidgetsVisibilityCommand}"/>
         </StackPanel>
 
         <!-- ДИСПЛЕЙ (двухстрочный: превью выражения + текущее число) -->

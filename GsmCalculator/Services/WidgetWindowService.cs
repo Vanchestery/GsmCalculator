@@ -16,7 +16,12 @@ public class WidgetWindowService : IWidgetWindowService
     private readonly IServiceProvider _sp;
 
     private readonly Dictionary<Guid, WidgetWindow> _open = new();
+    private readonly HashSet<Guid> _hiddenByToggle = new();
     private int _openedCounter;
+
+    public bool AreWidgetsHidden => _hiddenByToggle.Count > 0;
+
+    public event EventHandler? VisibilityChanged;
 
     public WidgetWindowService(IServiceProvider sp)
     {
@@ -28,10 +33,15 @@ public class WidgetWindowService : IWidgetWindowService
         if (widget is null) throw new ArgumentNullException(nameof(widget));
 
         // Уже открыт? Просто вытаскиваем поверх.
+        // Если этот виджет был спрятан тогглом — показываем только его,
+        // остальные из пачки остаются скрытыми.
         if (_open.TryGetValue(widget.Id, out var existing))
         {
+            var wasHidden = _hiddenByToggle.Remove(widget.Id);
             if (!existing.IsVisible) existing.Show();
             existing.Activate();
+            if (wasHidden)
+                VisibilityChanged?.Invoke(this, EventArgs.Empty);
             return;
         }
 
@@ -107,6 +117,40 @@ public class WidgetWindowService : IWidgetWindowService
 
     public IReadOnlyCollection<Guid> GetOpenWidgetIds() => _open.Keys.ToList();
 
+    public void ApplyAlwaysOnTop(bool alwaysOnTop)
+    {
+        var app = Application.Current;
+        if (app?.MainWindow != null)
+            app.MainWindow.Topmost = alwaysOnTop;
+
+        foreach (var window in _open.Values)
+            window.Topmost = alwaysOnTop;
+
+        if (app == null) return;
+        foreach (Window w in app.Windows)
+        {
+            if (w is AddWidgetWindow)
+                w.Topmost = alwaysOnTop;
+        }
+    }
+
+    public void ToggleVisibility()
+    {
+        if (AreWidgetsHidden)
+            ShowHidden();
+        else
+            HideVisible();
+    }
+
+    public void ReapplyHiddenState()
+    {
+        foreach (var id in _hiddenByToggle)
+        {
+            if (_open.TryGetValue(id, out var window) && window.IsVisible)
+                window.Hide();
+        }
+    }
+
     /// <summary>
     /// Создаёт ViewModel и окно виджета, вешает обработчик Closed.
     /// Общая часть для OpenOrFocus и RestoreWidget.
@@ -126,10 +170,18 @@ public class WidgetWindowService : IWidgetWindowService
             widgetService, debouncer);
         var window = new WidgetWindow { DataContext = vm };
 
+        // Owner привязывает виджет к главному окну: виджет остаётся над калькулятором,
+        // но вместе с ним уходит под другие приложения (пока Topmost выключен).
+        window.Owner = Application.Current?.MainWindow;
+        window.Topmost = ReadAlwaysOnTop();
+
         // Регистрируем окно как «сателлит» магнитной системы (v1.2 — блок J).
         // Отписка — при Closed (см. ниже).
         var magnetism = _sp.GetRequiredService<IWindowMagnetismService>();
         magnetism.RegisterSatellite(window);
+        // После Loaded известны высота (SizeToContent) и HWND для DWM-инсетов —
+        // иначе восстановленная сессия не узнаёт уже прилипшие боковые виджеты.
+        window.Loaded += (_, _) => magnetism.RefreshSnap(window);
 
         // При закрытии — убираем из реестра и освобождаем VM
         // (она отпишется от LanguageChanged, иначе утечка).
@@ -137,11 +189,43 @@ public class WidgetWindowService : IWidgetWindowService
         {
             magnetism.UnregisterSatellite(window);
             _open.Remove(widget.Id);
+            var wasHidden = _hiddenByToggle.Remove(widget.Id);
             vm.Dispose();
+            if (wasHidden)
+                VisibilityChanged?.Invoke(this, EventArgs.Empty);
         };
 
         return (window, vm);
     }
+
+    /// <summary>Прячет все сейчас видимые виджеты. Состояние VM и позиция сохраняются.</summary>
+    private void HideVisible()
+    {
+        foreach (var (id, window) in _open)
+        {
+            if (!window.IsVisible) continue;
+            window.Hide();
+            _hiddenByToggle.Add(id);
+        }
+
+        VisibilityChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Возвращает только тех, кого спрятал тоггл. Закрытые крестиком не трогаем.</summary>
+    private void ShowHidden()
+    {
+        foreach (var id in _hiddenByToggle.ToList())
+        {
+            if (_open.TryGetValue(id, out var window))
+                window.Show();
+        }
+
+        _hiddenByToggle.Clear();
+        VisibilityChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private bool ReadAlwaysOnTop()
+        => _sp.GetRequiredService<ISettingsService>().Load().AlwaysOnTop;
 
     /// <summary>
     /// Раскладывает новые окна каскадом справа от главного окна.

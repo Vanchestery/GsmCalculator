@@ -240,6 +240,40 @@ public class MagnetismCalculatorTests
     }
 
     [Fact]
+    public void TryFindSnap_VisuallyFlushLeft_WithShadowInsets_StillSnaps()
+    {
+        // Как после ApplySnap + сохранения сессии: визуально впритык слева,
+        // логический зазор = 14px тени > threshold 12. Без insets снэп пропадал —
+        // боковые виджеты не ехали с калькулятором.
+        var insets = new Thickness(7);
+        var state = new SatelliteSnapState(SnapEdge.Left, 50);
+        var (left, top) = MagnetismCalculator.ComputePosition(Host, state, 200, 150, insets, insets);
+        var sat = new Rect(left, top, 200, 150);
+
+        Assert.Null(MagnetismCalculator.TryFindSnap(sat, Host, threshold: 12));
+        var snap = MagnetismCalculator.TryFindSnap(sat, Host, threshold: 12, insets, insets);
+
+        Assert.NotNull(snap);
+        Assert.Equal(SnapEdge.Left, snap!.Edge);
+        Assert.Equal(50, snap.Offset);
+    }
+
+    [Fact]
+    public void TryFindSnap_VisuallyFlushBottom_WithShadowInsets_StillSnaps()
+    {
+        var insets = new Thickness(7);
+        var state = new SatelliteSnapState(SnapEdge.Bottom, 100);
+        var (left, top) = MagnetismCalculator.ComputePosition(Host, state, 200, 150, insets, insets);
+        var sat = new Rect(left, top, 200, 150);
+
+        var snap = MagnetismCalculator.TryFindSnap(sat, Host, threshold: 12, insets, insets);
+
+        Assert.NotNull(snap);
+        Assert.Equal(SnapEdge.Bottom, snap!.Edge);
+        Assert.Equal(100, snap.Offset);
+    }
+
+    [Fact]
     public void ComputePosition_DefaultInsets_BehaviourUnchanged()
     {
         // Без insets-параметров — старое поведение (Thickness default = 0).

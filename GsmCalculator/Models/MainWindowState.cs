@@ -5,8 +5,8 @@ namespace GsmCalculator.Models;
 /// Хранится отдельно от <see cref="SessionState"/> — позиция/размер
 /// запоминаются ВСЕГДА, независимо от настройки StartupBehavior.
 ///
-/// Значения берутся из <c>Window.RestoreBounds</c>, который содержит
-/// геометрию окна в normal-режиме (даже если оно сейчас maximized).
+/// Значения в normal-режиме берутся из текущих Left/Top/Width/Height окна;
+/// при Maximized/Minimized — из <c>Window.RestoreBounds</c>.
 /// </summary>
 public class MainWindowState
 {

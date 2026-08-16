@@ -43,6 +43,14 @@ public class WindowMagnetismService : IWindowMagnetismService
         satellite.LocationChanged -= OnSatelliteMoved;
     }
 
+    public void RefreshSnap(Window satellite)
+    {
+        if (_host == null) return;
+        if (!_satellites.ContainsKey(satellite)) return;
+
+        _satellites[satellite] = TrySnap(satellite);
+    }
+
     /// <summary>
     /// Сателлит подвинулся (либо юзер тянет, либо мы сами программно).
     /// Если двинули мы сами — пропускаем (флаг). Иначе — пересчитываем снэп.
@@ -54,7 +62,7 @@ public class WindowMagnetismService : IWindowMagnetismService
         if (sender is not Window sat) return;
         if (!_satellites.ContainsKey(sat)) return;
 
-        var snap = MagnetismCalculator.TryFindSnap(WindowRect(sat), WindowRect(_host), SnapThreshold);
+        var snap = TrySnap(sat);
         _satellites[sat] = snap;
 
         if (snap != null)
@@ -101,6 +109,15 @@ public class WindowMagnetismService : IWindowMagnetismService
         {
             _isPositioningProgrammatically = false;
         }
+    }
+
+    private SatelliteSnapState? TrySnap(Window sat)
+    {
+        if (_host == null) return null;
+        return MagnetismCalculator.TryFindSnap(
+            WindowRect(sat), WindowRect(_host), SnapThreshold,
+            WindowChromeHelper.GetVisualInsets(_host),
+            WindowChromeHelper.GetVisualInsets(sat));
     }
 
     private static Rect WindowRect(Window w)

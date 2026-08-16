@@ -31,4 +31,28 @@ public interface IWidgetWindowService
 
     /// <summary>Id всех открытых на текущий момент виджетов.</summary>
     IReadOnlyCollection<Guid> GetOpenWidgetIds();
+
+    /// <summary>
+    /// Применяет режим «всегда поверх» к главному окну, открытым виджетам
+    /// и окну «Добавить виджет» (если оно открыто).
+    /// </summary>
+    void ApplyAlwaysOnTop(bool alwaysOnTop);
+
+    /// <summary>
+    /// Прячет все видимые виджеты или возвращает тех, кого спрятал предыдущий вызов.
+    /// Закрытые крестиком виджеты не воскресаются.
+    /// </summary>
+    void ToggleVisibility();
+
+    /// <summary>
+    /// После Restore из свёрнутого состояния Windows снова показывает owned-окна.
+    /// Повторно прячем тех, кого спрятал тоггл.
+    /// </summary>
+    void ReapplyHiddenState();
+
+    /// <summary>True, пока есть виджеты, спрятанные последним <see cref="ToggleVisibility"/>.</summary>
+    bool AreWidgetsHidden { get; }
+
+    /// <summary>Срабатывает при смене видимости пачки виджетов (тоггл, закрытие, повторное открытие).</summary>
+    event EventHandler? VisibilityChanged;
 }

@@ -40,21 +40,13 @@ public partial class MainWindow : Window
         // На первом запуске App.OnStartup ставит SizeToContent="WidthAndHeight"
         // чтобы окно село по содержимому. Сразу после рендера возвращаем Manual —
         // иначе пользователь не сможет менять размер мышкой.
+        // Сохранённый размер НЕ сжимаем: раньше здесь был порог «шире 1.5×min →
+        // SizeToContent=Width», и ручной ресайз терялся при следующем запуске.
         if (SizeToContent != SizeToContent.Manual)
             SizeToContent = SizeToContent.Manual;
 
-        // Если сохранённая ширина явно великовата для текущего состава панелей
-        // (наследие старой версии, или юзер закрыл с историей а открыл без неё) —
-        // пересчитать один раз по содержимому.
         if (DataContext is MainViewModel vm)
-        {
-            var targetMin = ComputeMinWidth(vm.IsFavoritesVisible, vm.IsHistoryVisible);
-            if (Width > targetMin * 1.5)
-            {
-                SizeToContent = SizeToContent.Width;
-                SizeToContent = SizeToContent.Manual;
-            }
-        }
+            MinWidth = ComputeMinWidth(vm.IsFavoritesVisible, vm.IsHistoryVisible);
     }
 
     /// <summary>

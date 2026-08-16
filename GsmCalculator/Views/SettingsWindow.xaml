@@ -75,6 +75,12 @@
                   SelectedValuePath="Value" DisplayMemberPath="Label"
                   SelectedValue="{Binding CalculatorMode}"/>
 
+        <!-- Поверх других окон -->
+        <CheckBox Content="{DynamicResource Settings_AlwaysOnTop}"
+                  IsChecked="{Binding AlwaysOnTop}"
+                  Foreground="{DynamicResource TextForeground}"
+                  Margin="0,16,0,0"/>
+
         <!-- Кнопки OK / Отмена -->
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
             <Button Content="{DynamicResource Common_OK}" Style="{StaticResource DialogButton}"

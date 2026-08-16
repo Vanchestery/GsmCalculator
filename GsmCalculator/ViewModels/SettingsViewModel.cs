@@ -14,6 +14,7 @@ public class SettingsViewModel : ViewModelBase
     private readonly ISettingsService _settingsService;
     private readonly IThemeService _themeService;
     private readonly ILocalizationService _localizationService;
+    private readonly IWidgetWindowService _widgetWindows;
     private readonly MainViewModel _mainVm;
 
     // Границы слайдера истории (по ТЗ 5..50).
@@ -55,6 +56,13 @@ public class SettingsViewModel : ViewModelBase
         set => SetProperty(ref _calculatorMode, value);
     }
 
+    private bool _alwaysOnTop;
+    public bool AlwaysOnTop
+    {
+        get => _alwaysOnTop;
+        set => SetProperty(ref _alwaysOnTop, value);
+    }
+
     // Списки опций для ComboBox'ов.
     public IReadOnlyList<NamedOption<ColorTheme>> ThemeOptions { get; }
     public IReadOnlyList<NamedOption<StartupBehavior>> StartupOptions { get; }
@@ -71,11 +79,13 @@ public class SettingsViewModel : ViewModelBase
         ISettingsService settingsService,
         IThemeService themeService,
         ILocalizationService localizationService,
+        IWidgetWindowService widgetWindows,
         MainViewModel mainVm)
     {
         _settingsService = settingsService;
         _themeService = themeService;
         _localizationService = localizationService;
+        _widgetWindows = widgetWindows;
         _mainVm = mainVm;
 
         // Загружаем текущие настройки в редактируемые поля.
@@ -85,6 +95,7 @@ public class SettingsViewModel : ViewModelBase
         _startupBehavior = s.StartupBehavior;
         _language = s.Language;
         _calculatorMode = s.CalculatorMode;
+        _alwaysOnTop = s.AlwaysOnTop;
 
         // Подписи опций берём из языкового словаря. SettingsViewModel создаётся
         // заново при каждом открытии окна, поэтому подписи всегда в текущем языке.
@@ -130,7 +141,8 @@ public class SettingsViewModel : ViewModelBase
             Language = Language,
             CalculatorMode = CalculatorMode,
             RoundingMode = current.RoundingMode,
-            FavoriteWidgetIds = current.FavoriteWidgetIds
+            FavoriteWidgetIds = current.FavoriteWidgetIds,
+            AlwaysOnTop = AlwaysOnTop
         };
 
         // Сохраняем в settings.json.
@@ -141,6 +153,7 @@ public class SettingsViewModel : ViewModelBase
         _localizationService.SetLanguage(Language);
         _mainVm.ApplyHistorySize(HistorySize);
         _mainVm.ApplyCalculatorMode(CalculatorMode);
+        _widgetWindows.ApplyAlwaysOnTop(AlwaysOnTop);
         // StartupBehavior сохранён, но эффект только при следующем запуске.
 
         CloseRequested?.Invoke(this, true);

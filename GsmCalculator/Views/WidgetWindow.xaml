@@ -8,7 +8,6 @@
         Title="{Binding Name}"
         WindowStyle="ToolWindow"
         ResizeMode="NoResize"
-        Topmost="True"
         ShowInTaskbar="False"
         SizeToContent="Height"
         Width="215"

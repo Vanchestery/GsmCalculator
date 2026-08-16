@@ -628,6 +628,59 @@ public class MainViewModelTests
         addWidget.Verify(a => a.OpenDialog(), Times.Once);
     }
 
+    [Fact]
+    public void ToggleWidgetsVisibilityCommand_CallsWidgetWindowService()
+    {
+        var widgetWindows = new Mock<IWidgetWindowService>();
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(AppSettings.CreateDefault());
+        var loc = new Mock<ILocalizationService>();
+        loc.Setup(l => l.Get(It.IsAny<string>())).Returns((string key) => key);
+
+        var widgetService = new Mock<IWidgetService>();
+        widgetService.Setup(s => s.GetAll()).Returns(new List<Widget>());
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object,
+            Mock.Of<IClipboardService>(),
+            widgetService.Object, EmptyFavorites(), widgetWindows.Object);
+
+        vm.ToggleWidgetsVisibilityCommand.Execute(null);
+
+        widgetWindows.Verify(w => w.ToggleVisibility(), Times.Once);
+    }
+
+    [Fact]
+    public void WidgetsToggleLabel_UsesCorrectKey_BasedOnHiddenState()
+    {
+        var widgetWindows = new Mock<IWidgetWindowService>();
+        widgetWindows.Setup(w => w.AreWidgetsHidden).Returns(false);
+        var loc = new Mock<ILocalizationService>();
+        loc.Setup(l => l.Get("Main_HideWidgets")).Returns("HIDE_W");
+        loc.Setup(l => l.Get("Main_ShowWidgets")).Returns("SHOW_W");
+        var settings = new Mock<ISettingsService>();
+        settings.Setup(s => s.Load()).Returns(AppSettings.CreateDefault());
+
+        var widgetService = new Mock<IWidgetService>();
+        widgetService.Setup(s => s.GetAll()).Returns(new List<Widget>());
+
+        var vm = new MainViewModel(
+            new CalculatorService(), settings.Object,
+            Mock.Of<IAddWidgetWindowService>(), Mock.Of<ISettingsWindowService>(), loc.Object,
+            Mock.Of<IClipboardService>(),
+            widgetService.Object, EmptyFavorites(), widgetWindows.Object);
+
+        Assert.Equal("HIDE_W", vm.WidgetsToggleLabel);
+        Assert.Equal("\uE890", vm.WidgetsToggleIcon);
+
+        widgetWindows.Setup(w => w.AreWidgetsHidden).Returns(true);
+        widgetWindows.Raise(w => w.VisibilityChanged += null, widgetWindows.Object, EventArgs.Empty);
+
+        Assert.Equal("SHOW_W", vm.WidgetsToggleLabel);
+        Assert.Equal("\uE8F4", vm.WidgetsToggleIcon);
+    }
+
     // ----------------------------------------------------------------
     // Блок K — Режим округления
     // ----------------------------------------------------------------

@@ -7,7 +7,6 @@
         mc:Ignorable="d"
         Title="{DynamicResource AddWidget_Title}"
         WindowStyle="ToolWindow"
-        Topmost="True"
         ShowInTaskbar="False"
         Width="410" Height="500"
         MinWidth="360" MinHeight="380"

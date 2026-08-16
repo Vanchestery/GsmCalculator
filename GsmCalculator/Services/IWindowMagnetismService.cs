@@ -25,6 +25,12 @@ public interface IWindowMagnetismService
     void RegisterSatellite(Window satellite);
 
     /// <summary>
+    /// Пересчитывает снэп уже показанного сателлита (после Loaded / восстановления сессии).
+    /// Не двигает окно — только запоминает грань, чтобы дальше ехать вместе с хостом.
+    /// </summary>
+    void RefreshSnap(Window satellite);
+
+    /// <summary>
     /// Снимает регистрацию сателлита (при закрытии окна виджета).
     /// </summary>
     void UnregisterSatellite(Window satellite);

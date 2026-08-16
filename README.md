@@ -18,7 +18,10 @@
 
 ## Скриншоты
 
-Актуальные кадры (главное окно, виджеты, настройки) — в [`docs/screenshots/`](docs/screenshots/) после ближайшего релиза.
+![Главное окно и виджеты](docs/screenshots/main-dark.png)
+![Конвертация л↔кг](docs/screenshots/widget.png)
+![Только калькулятор](docs/screenshots/calculator.png)
+![Настройки](docs/screenshots/settings.png)
 
 ## Возможности
 

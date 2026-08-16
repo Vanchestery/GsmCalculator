@@ -1,25 +1,28 @@
 version: 2
 updates:
-  # NuGet packages в основном проекте
+  # NuGet: app + tests in one monthly grouped PR.
   - package-ecosystem: "nuget"
-    directory: "/GsmCalculator"
+    directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     commit-message:
       prefix: "chore(deps)"
+    ignore:
+      - dependency-name: "Microsoft.Extensions.DependencyInjection"
+        update-types: ["version-update:semver-major"]
+    groups:
+      nuget:
+        patterns:
+          - "*"
 
-  # NuGet packages в тестовом проекте
-  - package-ecosystem: "nuget"
-    directory: "/GsmCalculator.Tests"
-    schedule:
-      interval: "weekly"
-    commit-message:
-      prefix: "chore(deps-test)"
-
-  # GitHub Actions версии
+  # GitHub Actions: one monthly grouped PR.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     commit-message:
       prefix: "chore(ci)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"

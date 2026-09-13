@@ -1,109 +1,88 @@
 # GsmCalculator
-
-> Десктоп-калькулятор на WPF для расчётов ГСМ — стандартные операции
-> плюс плавающие виджеты для конвертации литров и килограммов
-> по плотности топлива.
-
+> Desktop WPF calculator for fuel (GSM) warehouse math — standard operations
+> plus floating widgets that convert litres ↔ kilograms by fuel density.
 [![Build](https://github.com/Vanchestery/GsmCalculator/actions/workflows/ci.yml/badge.svg)](https://github.com/Vanchestery/GsmCalculator/actions/workflows/ci.yml)
 [![.NET 9](https://img.shields.io/badge/.NET-9.0-512BD4)](https://dotnet.microsoft.com/)
 [![WPF](https://img.shields.io/badge/UI-WPF-blue)](https://learn.microsoft.com/dotnet/desktop/wpf/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-## Описание
-
-Приложение для расчётов на складах ГСМ (горюче-смазочных материалов).
-Совмещает обычный калькулятор и плавающие виджеты для каждого вида
-топлива (АИ-92, ДТ-Л, ДТ-З, ТС-1, Масла, ТЖ, ОЖ) с конвертацией
-л↔кг по плотности.
-
-## Скриншоты
-
-![Главное окно и виджеты](docs/screenshots/main-dark.png)
-![Конвертация л↔кг](docs/screenshots/widget.png)
-![Только калькулятор](docs/screenshots/calculator.png)
-![Настройки](docs/screenshots/settings.png)
-
-## Возможности
-
-- **Калькулятор** в двух режимах:
-  - **Classic** — операции слева направо (как Windows Calc Standard).
-  - **Engineering** — приоритет × и ÷ над + и −.
-- **Двухстрочный дисплей** с превью выражения над текущим числом.
-- **История вычислений** с настраиваемым размером (5..50).
-- **Клавиатурные шорткаты** для всех операций (D0-D9, NumPad, +/−/×/÷, Enter=, Esc=C, Backspace, Delete=CE).
-- **Плавающие виджеты** конвертации л↔кг:
-  - Встроенные: АИ-92, ДТ-Л, ДТ-З, ТС-1, Масла, ТЖ, ОЖ.
-  - Своя плотность (для переменных) и округление 0..3 знака.
-  - Кнопка «Вставить в калькулятор» отправляет результат на дисплей.
-  - Одним кликом в топ-баре — скрыть все открытые виджеты и вернуть ту же пачку.
-- **Always on top** — опция в настройках: калькулятор и виджеты поверх всех окон или обычный z-order (по умолчанию виджеты уходят вместе с калькулятором под активное приложение).
-- **Создание пользовательских виджетов** с фиксированной/переменной плотностью.
-- **Избранное** — закреплённые виджеты на боковой панели главного окна.
-- **Округление** дисплея циклом в топ-баре: выкл / до целых / до 0.1.
-- **Три цветовые темы** Light / Dark / Blue с тёмной полосой заголовка через DWM (Windows 10 1809+).
-- **Локализация RU/EN** на лету через `ResourceDictionary` и `DynamicResource`.
-- **Сохранение сессии**: дисплей, история, открытые виджеты и их позиции восстанавливаются между запусками.
-- **Готовые сборки** для Windows x64 публикуются в [Releases](https://github.com/Vanchestery/GsmCalculator/releases) при пуше тега `v*`.
-
-## Технологический стек
-
-| Слой | Технология |
-|------|------------|
-| Язык / Платформа | C# 13, .NET 9 (`net9.0-windows`) |
+## Overview
+App for warehouse GSM (fuels and lubricants) calculations.
+Combines a normal calculator with floating per-fuel widgets (AI-92, DT-L, DT-Z, TS-1, oils, technical fluids, coolants) that convert L ↔ kg using density.
+## Screenshots
+![Main window and widgets](docs/screenshots/main-dark.png)
+![L ↔ kg conversion](docs/screenshots/widget.png)
+![Calculator only](docs/screenshots/calculator.png)
+![Settings](docs/screenshots/settings.png)
+## Features
+- **Calculator** in two modes:
+  - **Classic** — left-to-right evaluation (like Windows Calculator Standard).
+  - **Engineering** — × and ÷ bind tighter than + and −.
+- **Two-line display** with expression preview above the current number.
+- **History** with configurable size (5..50).
+- **Keyboard shortcuts** for all operations (D0–D9, NumPad, +/−/×/÷, Enter=, Esc=C, Backspace, Delete=CE).
+- **Floating L ↔ kg widgets:**
+  - Built-ins: AI-92, DT-L, DT-Z, TS-1, oils, technical fluids, coolants.
+  - Custom density (fixed or variable) and rounding 0..3 decimals.
+  - “Insert into calculator” sends the result to the display.
+  - One top-bar click hides all open widgets and restores the same set later.
+- **Always on top** — optional: calculator and widgets above other windows, or normal z-order (by default widgets follow the calculator under the active app).
+- **Custom widgets** with fixed/variable density.
+- **Favorites** — pinned widgets on the main-window side panel.
+- **Display rounding** cycle in the top bar: off / integers / 0.1.
+- **Three themes** Light / Dark / Blue with a dark title bar via DWM (Windows 10 1809+).
+- **RU/EN localization** on the fly via `ResourceDictionary` and `DynamicResource`.
+- **Session restore**: display, history, open widgets and positions survive restarts.
+- **Ready-made Windows x64 builds** in [Releases](https://github.com/Vanchestery/GsmCalculator/releases) when you push a `v*` tag.
+## Stack
+| Layer | Tech |
+|------|------|
+| Language / runtime | C# 13, .NET 9 (`net9.0-windows`) |
 | UI | WPF, XAML, MVVM |
 | DI | `Microsoft.Extensions.DependencyInjection` |
-| Сериализация | `System.Text.Json` |
-| Тесты | xUnit 2.9, Moq 4.20 |
+| Serialization | `System.Text.Json` |
+| Tests | xUnit 2.9, Moq 4.20 |
 | CI / CD | GitHub Actions |
-
-## Архитектура
-
-Чистый MVVM с разделением на 4 слоя:
-
+## Architecture
+Clean MVVM split into four layers:
 ```
 GsmCalculator/
-├── Models/         POCO-модели данных
+├── Models/         POCO data models
 ├── ViewModels/     MVVM ViewModels (INotifyPropertyChanged)
-├── Views/          XAML-окна + code-behind
-├── Services/       Бизнес-логика и инфраструктура
-│   ├── ICalculatorService     математика
-│   ├── IConversionService     л↔кг
-│   ├── ISettingsService       JSON-настройки
-│   ├── IWidgetService         каталог виджетов
-│   ├── IFavoritesService      закреплённые виджеты
-│   ├── ISessionService        сохранение сессии
-│   ├── IWindowStateService    позиция главного окна
-│   ├── IWindowMagnetismService прилипание виджетов
-│   ├── ILocalizationService   локализация
-│   ├── IThemeService          цветовые темы
-│   └── I*WindowService        открытие окон без знания о View
+├── Views/          XAML windows + code-behind
+├── Services/       Business logic and infrastructure
+│   ├── ICalculatorService      math
+│   ├── IConversionService      L ↔ kg
+│   ├── ISettingsService        JSON settings
+│   ├── IWidgetService          widget catalog
+│   ├── IFavoritesService       pinned widgets
+│   ├── ISessionService         session persistence
+│   ├── IWindowStateService     main window position
+│   ├── IWindowMagnetismService widget snapping
+│   ├── ILocalizationService    localization
+│   ├── IThemeService           themes
+│   └── I*WindowService         open windows without knowing Views
 ├── Resources/
-│   ├── Themes/                LightTheme / DarkTheme / BlueTheme
-│   ├── Strings.ru.xaml        русские строки
-│   ├── Strings.en.xaml        английские строки
-│   ├── ControlStyles.xaml     кастомный 3D-шаблон Button
+│   ├── Themes/                 LightTheme / DarkTheme / BlueTheme
+│   ├── Strings.ru.xaml         Russian strings
+│   ├── Strings.en.xaml         English strings
+│   ├── ControlStyles.xaml      custom 3D Button template
 │   └── app.ico
 └── Helpers/
-    ├── ButtonProps.cs         attached property для CornerRadius
-    ├── RoundingFormatter.cs   режимы округления дисплея
-    ├── MagnetismCalculator.cs геометрия прилипания
-    └── TitleBarHelper.cs      тёмная полоса заголовка (DWM)
+    ├── ButtonProps.cs          CornerRadius attached property
+    ├── RoundingFormatter.cs    display rounding modes
+    ├── MagnetismCalculator.cs  snap geometry
+    └── TitleBarHelper.cs       dark title bar (DWM)
 ```
-
-**Ключевые архитектурные решения:**
-
-- **Views не знают про сервисы** — только через биндинги к ViewModels.
-- **ViewModels не знают про View-классы** — открытие окон через `I*WindowService`-абстракции.
-- **DI** конфигурируется в `App.OnStartup`. Сервисы окон получают `IServiceProvider` и **лениво** резолвят `MainViewModel` — это разрывает циклическую зависимость (`MainViewModel` → `IAddWidgetWindowService` → `AddWidgetViewModel` → `MainViewModel`).
-- **Темы и язык** переключаются на лету через подмену `ResourceDictionary` + `DynamicResource` в XAML.
-- **Долгоживущие VM** (Widget, AddWidget) подписаны на `LanguageChanged` и реализуют `IDisposable` — иначе синглтон `LocalizationService` держал бы ссылки на закрытые VM (утечка памяти).
-- **Сессия**: при `MainWindow.Closing` снимаются позиции виджетов до их закрытия. `ShutdownMode=OnMainWindowClose` гарантирует завершение приложения при закрытии главного окна.
-- **Z-order виджетов**: `Owner = MainWindow` держит виджеты над калькулятором; `Topmost` включается только настройкой «Всегда поверх». Скрытие пачки — `Hide()`, не `Close()`, чтобы не терять плотность/результат/позицию.
-
-## Сборка и запуск
-
-Требуется **.NET 9 SDK** и **Visual Studio 2022** 17.12+ (или JetBrains Rider 2024.3+).
-
+**Key decisions:**
+- **Views never talk to services** — only bindings to ViewModels.
+- **ViewModels never know View types** — windows open through `I*WindowService` abstractions.
+- **DI** is wired in `App.OnStartup`. Window services take `IServiceProvider` and **lazily** resolve `MainViewModel` to break the cycle (`MainViewModel` → `IAddWidgetWindowService` → `AddWidgetViewModel` → `MainViewModel`).
+- **Themes and language** swap at runtime by replacing `ResourceDictionary` + `DynamicResource`.
+- **Long-lived VMs** (Widget, AddWidget) subscribe to `LanguageChanged` and implement `IDisposable` — otherwise the singleton `LocalizationService` would keep closed VMs alive.
+- **Session**: on `MainWindow.Closing`, widget positions are captured before widgets close. `ShutdownMode=OnMainWindowClose` ensures the process exits with the main window.
+- **Widget z-order**: `Owner = MainWindow` keeps widgets above the calculator; `Topmost` only when “Always on top” is on. Hiding the pack uses `Hide()`, not `Close()`, so density/result/position stay intact.
+## Build and run
+Requires **.NET 9 SDK** and **Visual Studio 2022** 17.12+ (or JetBrains Rider 2024.3+).
 ```bash
 git clone https://github.com/Vanchestery/GsmCalculator.git
 cd GsmCalculator
@@ -111,32 +90,22 @@ dotnet restore
 dotnet build
 dotnet run --project GsmCalculator
 ```
-
-Или открыть `GsmCalculator.sln` в Visual Studio и нажать **F5**.
-
-### Готовая сборка
-
-Скачать последнюю Windows-сборку (self-contained, не требует .NET Runtime):
+Or open `GsmCalculator.sln` in Visual Studio and press **F5**.
+### Prebuilt binary
+Download the latest Windows build (self-contained, no .NET Runtime required):
 [Releases](https://github.com/Vanchestery/GsmCalculator/releases)
-
-## Тесты
-
+## Tests
 ```bash
 dotnet test
 ```
-
-~230 тестов на xUnit + Moq:
-- сервисы (CalculatorService, ConversionService, SettingsService, WidgetService, SessionService, FavoritesService);
-- MainViewModel — state machine, оба режима калькулятора, история, округление, тоггл виджетов.
-
-## Где хранятся пользовательские данные
-
+~230 xUnit + Moq tests covering:
+- services (Calculator, Conversion, Settings, Widget, Session, Favorites);
+- MainViewModel — state machine, both calculator modes, history, rounding, widget toggles.
+## User data location
 `%AppData%\GsmCalculator\`:
-- `settings.json` — настройки приложения;
-- `widgets.json` — каталог виджетов (встроенные + пользовательские);
-- `session.json` — сохранённая сессия (если есть);
-- `window-state.json` — позиция и размер главного окна.
-
-## Лицензия
-
+- `settings.json` — app settings;
+- `widgets.json` — widget catalog (built-in + custom);
+- `session.json` — saved session (if any);
+- `window-state.json` — main window position and size.
+## License
 [MIT](LICENSE) © 2026

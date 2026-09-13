@@ -1,13 +1,9 @@
 # Contributing
-
-Это персональный проект-портфолио, но PR и issue приветствуются.
-
-## Окружение
-
-- **.NET 9 SDK** ([скачать](https://dotnet.microsoft.com/download))
-- **Windows 10/11** (WPF — windows-only)
-- **Visual Studio 2022** 17.12+ или **JetBrains Rider** 2024.3+
-
+This is a personal portfolio project, but PRs and issues are welcome.
+## Environment
+- **.NET 9 SDK** ([download](https://dotnet.microsoft.com/download))
+- **Windows 10/11** (WPF is Windows-only)
+- **Visual Studio 2022** 17.12+ or **JetBrains Rider** 2024.3+
 ```bash
 git clone https://github.com/Vanchestery/GsmCalculator.git
 cd GsmCalculator
@@ -15,43 +11,27 @@ dotnet restore
 dotnet build
 dotnet test
 ```
-
-## Стиль кода
-
-- Соблюдайте существующий стиль (`Nullable enable`, file-scoped namespaces,
-  `var` для очевидных типов).
-- Public API должны быть документированы XML-комментариями.
-- Комментарии в коде — на русском (как в существующем коде).
-
-## Архитектурные принципы
-
-- **MVVM**: View не должен знать про Services; ViewModel не должен напрямую
-  открывать другие окна (используйте `I*WindowService`).
-- **Services** изолированы за интерфейсами для тестируемости.
-- **Модели** — чистые POCO без `INotifyPropertyChanged`.
-
-## Тесты
-
-Любая новая бизнес-логика должна сопровождаться тестами в `GsmCalculator.Tests/`.
-
-- Чистые сервисы — без Moq, прямые тесты.
-- Файловые сервисы — на временных файлах через `Path.GetTempPath()`.
-- ViewModels — с реальными чистыми сервисами + Moq для зависимостей с побочными эффектами.
-
-## Формат коммитов
-
-Используется [Conventional Commits](https://www.conventionalcommits.org/ru/):
-
+## Code style
+- Follow the existing style (`Nullable enable`, file-scoped namespaces, `var` for obvious types).
+- Public API should have XML documentation comments.
+- Inline code comments stay in **Russian** (same as the existing codebase).
+## Architecture
+- **MVVM**: Views must not know about Services; ViewModels must not open other windows directly (use `I*WindowService`).
+- **Services** are behind interfaces for testability.
+- **Models** are plain POCOs without `INotifyPropertyChanged`.
+## Tests
+New business logic should come with tests in `GsmCalculator.Tests/`.
+- Pure services — no Moq, direct tests.
+- File-based services — use temp files via `Path.GetTempPath()`.
+- ViewModels — real pure services + Moq for side-effect dependencies.
+## Commit format
+Use [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 type(scope): short subject
-
 Optional longer body explaining what and why.
 ```
-
-Типы: `feat`, `fix`, `chore`, `docs`, `ci`, `test`, `refactor`, `perf`, `style`.
-
+Types: `feat`, `fix`, `chore`, `docs`, `ci`, `test`, `refactor`, `perf`, `style`.
 ## Pull Requests
-
-1. Форкните репозиторий и создайте feature-ветку от `main`.
-2. Убедитесь что `dotnet build` и `dotnet test` проходят.
-3. Опишите изменения в PR — что и зачем.
+1. Fork the repo and create a feature branch from `main`.
+2. Make sure `dotnet build` and `dotnet test` pass.
+3. Describe the change in the PR — what and why.

@@ -23,11 +23,17 @@ public class WindowMagnetismService : IWindowMagnetismService
     {
         if (_host == host) return;
         if (_host != null)
+        {
             _host.LocationChanged -= OnHostMoved;
+            _host.StateChanged -= OnHostStateChanged;
+        }
 
         _host = host;
         if (_host != null)
+        {
             _host.LocationChanged += OnHostMoved;
+            _host.StateChanged += OnHostStateChanged;
+        }
     }
 
     public void RegisterSatellite(Window satellite)
@@ -62,6 +68,11 @@ public class WindowMagnetismService : IWindowMagnetismService
         if (sender is not Window sat) return;
         if (!_satellites.ContainsKey(sat)) return;
 
+        // Свёрнутое/унесённое Win32-окно: не пересчитываем снэп,
+        // иначе прилипание «отваливается» и в сессию уедут -32000.
+        if (!WindowPositionHelper.IsRestorablePosition(sat.Left, sat.Top))
+            return;
+
         var snap = TrySnap(sat);
         _satellites[sat] = snap;
 
@@ -71,11 +82,32 @@ public class WindowMagnetismService : IWindowMagnetismService
 
     /// <summary>
     /// Хост подвинулся — двигаем все прилипшие сателлиты, сохраняя их сдвиги.
+    /// Свёрнутый хост Win32 уносит в (-32000,-32000); за ним следовать нельзя.
     /// </summary>
     private void OnHostMoved(object? sender, EventArgs e)
     {
         if (_host == null) return;
+        if (!WindowPositionHelper.ShouldSatellitesFollowHost(_host.WindowState, _host.Left, _host.Top))
+            return;
 
+        ReapplySnaps();
+    }
+
+    /// <summary>
+    /// После Restore из свёрнутого состояния хост снова на экране —
+    /// возвращаем прилипшие виджеты к его граням.
+    /// </summary>
+    private void OnHostStateChanged(object? sender, EventArgs e)
+    {
+        if (_host == null) return;
+        if (!WindowPositionHelper.ShouldSatellitesFollowHost(_host.WindowState, _host.Left, _host.Top))
+            return;
+
+        ReapplySnaps();
+    }
+
+    private void ReapplySnaps()
+    {
         foreach (var (sat, state) in _satellites)
         {
             if (state == null) continue;
@@ -98,6 +130,9 @@ public class WindowMagnetismService : IWindowMagnetismService
         var (left, top) = MagnetismCalculator.ComputePosition(
             WindowRect(_host), state, sat.Width, sat.Height,
             hostInsets, satInsets);
+
+        if (!WindowPositionHelper.IsRestorablePosition(left, top))
+            return;
 
         _isPositioningProgrammatically = true;
         try

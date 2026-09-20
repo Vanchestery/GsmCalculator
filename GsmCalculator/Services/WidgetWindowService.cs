@@ -17,6 +17,7 @@ public class WidgetWindowService : IWidgetWindowService
 
     private readonly Dictionary<Guid, WidgetWindow> _open = new();
     private readonly HashSet<Guid> _hiddenByToggle = new();
+    private readonly Dictionary<Guid, Point> _lastOnScreenPosition = new();
     private int _openedCounter;
 
     public bool AreWidgetsHidden => _hiddenByToggle.Count > 0;
@@ -65,8 +66,9 @@ public class WidgetWindowService : IWidgetWindowService
         vm.ApplyState(state.CurrentDensity, state.CurrentDecimalPlaces);
 
         // Восстанавливаем позицию, если она в пределах виртуального экрана.
-        // Иначе (монитор отключили и т.п.) — раскладываем по умолчанию.
-        if (ScreenHelper.IsOnScreen(state.Left, state.Top))
+        // Иначе (монитор отключили, старая сессия со -32000 после сворачивания)
+        // — раскладываем по умолчанию.
+        if (WindowPositionHelper.IsRestorablePosition(state.Left, state.Top))
         {
             window.Left = state.Left;
             window.Top = state.Top;
@@ -89,11 +91,12 @@ public class WidgetWindowService : IWidgetWindowService
         {
             if (window.DataContext is not WidgetViewModel vm) continue;
 
+            var (left, top) = ResolveSavedPosition(id, window);
             result.Add(new OpenWidgetState
             {
                 WidgetId = id,
-                Left = window.Left,
-                Top = window.Top,
+                Left = left,
+                Top = top,
                 CurrentDensity = vm.Density,
                 CurrentDecimalPlaces = vm.DecimalPlaces
             });
@@ -181,7 +184,12 @@ public class WidgetWindowService : IWidgetWindowService
         magnetism.RegisterSatellite(window);
         // После Loaded известны высота (SizeToContent) и HWND для DWM-инсетов —
         // иначе восстановленная сессия не узнаёт уже прилипшие боковые виджеты.
-        window.Loaded += (_, _) => magnetism.RefreshSnap(window);
+        window.Loaded += (_, _) =>
+        {
+            RememberOnScreenPosition(widget.Id, window);
+            magnetism.RefreshSnap(window);
+        };
+        window.LocationChanged += (_, _) => RememberOnScreenPosition(widget.Id, window);
 
         // При закрытии — убираем из реестра и освобождаем VM
         // (она отпишется от LanguageChanged, иначе утечка).
@@ -189,6 +197,7 @@ public class WidgetWindowService : IWidgetWindowService
         {
             magnetism.UnregisterSatellite(window);
             _open.Remove(widget.Id);
+            _lastOnScreenPosition.Remove(widget.Id);
             var wasHidden = _hiddenByToggle.Remove(widget.Id);
             vm.Dispose();
             if (wasHidden)
@@ -226,6 +235,33 @@ public class WidgetWindowService : IWidgetWindowService
 
     private bool ReadAlwaysOnTop()
         => _sp.GetRequiredService<ISettingsService>().Load().AlwaysOnTop;
+
+    private void RememberOnScreenPosition(Guid widgetId, Window window)
+    {
+        if (WindowPositionHelper.IsRestorablePosition(window.Left, window.Top))
+            _lastOnScreenPosition[widgetId] = new Point(window.Left, window.Top);
+    }
+
+    /// <summary>
+    /// Текущие Left/Top свёрнутого или унесённого Win32-окна — это -32000.
+    /// Берём последнюю нормальную позицию, иначе RestoreBounds.
+    /// </summary>
+    private (double Left, double Top) ResolveSavedPosition(Guid widgetId, Window window)
+    {
+        if (WindowPositionHelper.IsRestorablePosition(window.Left, window.Top))
+            return (window.Left, window.Top);
+
+        if (_lastOnScreenPosition.TryGetValue(widgetId, out var remembered) &&
+            WindowPositionHelper.IsRestorablePosition(remembered.X, remembered.Y))
+            return (remembered.X, remembered.Y);
+
+        var bounds = window.RestoreBounds;
+        if (!bounds.IsEmpty &&
+            WindowPositionHelper.IsRestorablePosition(bounds.Left, bounds.Top))
+            return (bounds.Left, bounds.Top);
+
+        return (window.Left, window.Top);
+    }
 
     /// <summary>
     /// Раскладывает новые окна каскадом справа от главного окна.

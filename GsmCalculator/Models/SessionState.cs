@@ -13,7 +13,10 @@ public class SessionState
     /// <summary>История вычислений (новые в конце).</summary>
     public List<HistoryEntry> History { get; set; } = new();
 
-    /// <summary>Список открытых виджетов на момент закрытия.</summary>
+    /// <summary>
+    /// Открытые виджеты на момент закрытия, включая спрятанные тогглом
+    /// (<see cref="OpenWidgetState.IsHidden"/>).
+    /// </summary>
     public List<OpenWidgetState> OpenWidgets { get; set; } = new();
 
     /// <summary>Когда сессия была сохранена (для диагностики/UI).</summary>

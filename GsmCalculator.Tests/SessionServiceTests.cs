@@ -48,7 +48,8 @@ public class SessionServiceTests : IDisposable
                     Left = 100,
                     Top = 200,
                     CurrentDensity = 0.84,
-                    CurrentDecimalPlaces = 2
+                    CurrentDecimalPlaces = 2,
+                    IsHidden = true
                 }
             }
         };
@@ -66,6 +67,32 @@ public class SessionServiceTests : IDisposable
         Assert.Equal(100, loaded.OpenWidgets[0].Left);
         Assert.Equal(0.84, loaded.OpenWidgets[0].CurrentDensity);
         Assert.Equal(2, loaded.OpenWidgets[0].CurrentDecimalPlaces);
+        Assert.True(loaded.OpenWidgets[0].IsHidden);
+    }
+
+    [Fact]
+    public void Load_LegacyOpenWidget_WithoutIsHidden_DefaultsToVisible()
+    {
+        File.WriteAllText(_tempFile, """
+            {
+              "CurrentDisplay": "0",
+              "History": [],
+              "OpenWidgets": [
+                {
+                  "WidgetId": "11111111-1111-1111-1111-111111111111",
+                  "Left": 10,
+                  "Top": 20,
+                  "CurrentDensity": 0.75,
+                  "CurrentDecimalPlaces": 2
+                }
+              ]
+            }
+            """);
+
+        var loaded = new SessionService(_tempFile).Load();
+        Assert.NotNull(loaded);
+        Assert.Single(loaded!.OpenWidgets);
+        Assert.False(loaded.OpenWidgets[0].IsHidden);
     }
 
     [Fact]

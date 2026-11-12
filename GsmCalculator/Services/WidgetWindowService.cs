@@ -80,7 +80,25 @@ public class WidgetWindowService : IWidgetWindowService
 
         _open[widget.Id] = window;
         _openedCounter++;
+
+        // Show нужен, чтобы отработали Loaded / HWND / магнит.
+        // Спрятанные тогглом сразу прячем обратно — без активации, чтобы
+        // не мигать поверх калькулятора и не красть фокус.
+        if (state.IsHidden)
+        {
+            window.ShowActivated = false;
+            window.Opacity = 0;
+        }
+
         window.Show();
+
+        if (state.IsHidden)
+        {
+            _hiddenByToggle.Add(widget.Id);
+            window.Hide();
+            window.Opacity = 1;
+            VisibilityChanged?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     public IReadOnlyList<OpenWidgetState> CaptureOpenWidgets()
@@ -98,7 +116,8 @@ public class WidgetWindowService : IWidgetWindowService
                 Left = left,
                 Top = top,
                 CurrentDensity = vm.Density,
-                CurrentDecimalPlaces = vm.DecimalPlaces
+                CurrentDecimalPlaces = vm.DecimalPlaces,
+                IsHidden = _hiddenByToggle.Contains(id) || !window.IsVisible
             });
         }
 

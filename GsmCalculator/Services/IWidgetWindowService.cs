@@ -17,6 +17,8 @@ public interface IWidgetWindowService
     /// <summary>
     /// Открыть виджет при восстановлении сессии — на сохранённой позиции,
     /// с сохранённой плотностью и округлением.
+    /// Если <see cref="OpenWidgetState.IsHidden"/>, окно создаётся скрытым
+    /// и попадает в пачку тоггла «показать виджеты».
     /// </summary>
     void RestoreWidget(Widget widget, OpenWidgetState state);
 

@@ -27,4 +27,11 @@ public class OpenWidgetState
 
     /// <summary>Текущее выбранное округление (0..3).</summary>
     public int CurrentDecimalPlaces { get; set; } = 2;
+
+    /// <summary>
+    /// Виджет спрятан тогглом «скрыть виджеты», а не закрыт крестиком.
+    /// Окно и плотность остаются в сессии, но при старте не показываются
+    /// — пока пользователь снова не нажмёт ту же кнопку.
+    /// </summary>
+    public bool IsHidden { get; set; }
 }

@@ -168,6 +168,10 @@ public partial class App : Application
             if (widget != null)
                 widgetWindows.RestoreWidget(widget, ws);
         }
+
+        // Owned-окна Windows может снова показать при создании —
+        // тех, кого восстановили скрытыми, прячем повторно.
+        widgetWindows.ReapplyHiddenState();
     }
 
     /// <summary>
